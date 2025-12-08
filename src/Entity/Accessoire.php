@@ -7,7 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 class Accessoire extends Produit
 {
-    #[ORM\Column(length: 50)]
+    #[ORM\Column(length: 50, name: "accessoire_type")]
     private ?string $accessoireType = null;
 
     public function getAccessoireType(): ?string

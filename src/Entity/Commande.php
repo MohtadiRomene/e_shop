@@ -20,10 +20,10 @@ class Commande
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[ORM\Column(type: Types::DATE_MUTABLE, name: "Datecommande")]
     private ?\DateTime $datecommande = null;
 
-    #[ORM\Column]
+    #[ORM\Column(name: "prixtotale")]
     private ?float $prixtotal = null;
 
     #[ORM\ManyToOne]

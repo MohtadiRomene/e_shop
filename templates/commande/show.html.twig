@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Commande #{{ commande.id }} - Kaira{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 100px;">
+    <div class="container">
+        <h1 class="h2 mb-4">Commande #{{ commande.id }}</h1>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card rounded-0 mb-4">
+                    <div class="card-body">
+                        <h3 class="h5 mb-4">Produits commandés</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th>Quantité</th>
+                                    <th>Prix unitaire</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for commandeProduit in commande.commandeProduits %}
+                                    <tr>
+                                        <td><strong>{{ commandeProduit.produit.nomProduit }}</strong></td>
+                                        <td>{{ commandeProduit.quantite }}</td>
+                                        <td>{{ commandeProduit.prixUnitaire|number_format(2, ',', ' ') }} €</td>
+                                        <td><strong>{{ (commandeProduit.quantite * commandeProduit.prixUnitaire)|number_format(2, ',', ' ') }} €</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card rounded-0">
+                    <div class="card-body">
+                        <h3 class="h5 mb-4">Informations</h3>
+                        <p><strong>Date :</strong> {{ commande.datecommande|date('d/m/Y à H:i') }}</p>
+                        <p><strong>Total :</strong> <span class="h5">{{ commande.prixtotal|number_format(2, ',', ' ') }} €</span></p>
+                        {% if commande.facture %}
+                            <a href="{{ path('app_commande_facture', {id: commande.id}) }}" class="btn btn-primary w-100 rounded-0 mt-3">Voir la facture</a>
+                        {% endif %}
+                        <a href="{{ path('app_commandes') }}" class="btn btn-outline-dark w-100 rounded-0 mt-2">Retour aux commandes</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

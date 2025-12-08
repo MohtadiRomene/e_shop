@@ -15,7 +15,7 @@ class Pannier
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'paniers')]
+    #[ORM\OneToOne(inversedBy: 'panier')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $user = null;
 

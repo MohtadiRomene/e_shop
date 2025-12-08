@@ -49,10 +49,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $password = null;
 
     /**
-     * @var Collection<int, Pannier>
+     * Un client gère un seul panier (selon le diagramme UML)
      */
-    #[ORM\OneToMany(targetEntity: Pannier::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
-    private Collection $paniers;
+    #[ORM\OneToOne(targetEntity: Pannier::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private ?Pannier $panier = null;
 
     /**
      * @var Collection<int, Avis>
@@ -63,7 +63,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __construct()
     {
         $this->avis = new ArrayCollection();
-        $this->paniers = new ArrayCollection();
     }
 
 
@@ -185,33 +184,33 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * @return Collection<int, Pannier>
+     * Gérer le panier (méthode du diagramme UML)
      */
-    public function getPaniers(): Collection
+    public function getPanier(): ?Pannier
     {
-        return $this->paniers;
+        return $this->panier;
     }
 
-    public function addPanier(Pannier $panier): static
+    public function setPanier(?Pannier $panier): static
     {
-        if (!$this->paniers->contains($panier)) {
-            $this->paniers->add($panier);
+        $this->panier = $panier;
+        if ($panier && $panier->getUser() !== $this) {
             $panier->setUser($this);
         }
 
         return $this;
     }
 
-    public function removePanier(Pannier $panier): static
+    /**
+     * Créer ou récupérer le panier du client
+     */
+    public function gererPanier(): Pannier
     {
-        if ($this->paniers->removeElement($panier)) {
-            // set the owning side to null (unless already changed)
-            if ($panier->getUser() === $this) {
-                $panier->setUser(null);
-            }
+        if (!$this->panier) {
+            $this->panier = new Pannier();
+            $this->panier->setUser($this);
         }
-
-        return $this;
+        return $this->panier;
     }
 
     /**

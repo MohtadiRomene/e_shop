@@ -22,14 +22,14 @@ class RegistrationFormType extends AbstractType
             ->add('email', EmailType::class, [
                 'label' => 'Email',
                 'attr' => [
-                    'class' => 'form-control',
+                    'class' => 'form-control rounded-0',
                     'placeholder' => 'votre.email@example.com',
                 ],
             ])
             ->add('nom', TextType::class, [
                 'label' => 'Nom complet',
                 'attr' => [
-                    'class' => 'form-control',
+                    'class' => 'form-control rounded-0',
                     'placeholder' => 'Votre nom complet',
                 ],
                 'constraints' => [
@@ -41,7 +41,7 @@ class RegistrationFormType extends AbstractType
             ->add('tel', TextType::class, [
                 'label' => 'Téléphone',
                 'attr' => [
-                    'class' => 'form-control',
+                    'class' => 'form-control rounded-0',
                     'placeholder' => '0123456789',
                 ],
                 'constraints' => [
@@ -53,7 +53,7 @@ class RegistrationFormType extends AbstractType
             ->add('adresse', TextType::class, [
                 'label' => 'Adresse',
                 'attr' => [
-                    'class' => 'form-control',
+                    'class' => 'form-control rounded-0',
                     'placeholder' => 'Votre adresse complète',
                 ],
                 'constraints' => [
@@ -65,6 +65,12 @@ class RegistrationFormType extends AbstractType
             ->add('agreeTerms', CheckboxType::class, [
                 'mapped' => false,
                 'label' => 'J\'accepte les conditions d\'utilisation',
+                'attr' => [
+                    'class' => 'form-check-input',
+                ],
+                'label_attr' => [
+                    'class' => 'form-check-label',
+                ],
                 'constraints' => [
                     new IsTrue([
                         'message' => 'Vous devez accepter nos conditions.',
@@ -78,7 +84,8 @@ class RegistrationFormType extends AbstractType
                 'label' => 'Mot de passe',
                 'attr' => [
                     'autocomplete' => 'new-password',
-                    'class' => 'form-control',
+                    'class' => 'form-control rounded-0',
+                    'placeholder' => 'Minimum 6 caractères',
                 ],
                 'constraints' => [
                     new NotBlank([

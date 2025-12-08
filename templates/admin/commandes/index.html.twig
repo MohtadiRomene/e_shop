@@ -1,0 +1,41 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Commandes - Administration{% endblock %}
+
+{% block admin_content %}
+<h1 class="h2 mb-4">Commandes</h1>
+
+{% if commandes|length > 0 %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>N° Commande</th>
+                    <th>Client</th>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for commande in commandes %}
+                    <tr>
+                        <td>#{{ commande.id }}</td>
+                        <td>{{ commande.user.nom }}<br><small class="text-muted">{{ commande.user.email }}</small></td>
+                        <td>{{ commande.datecommande|date('d/m/Y H:i') }}</td>
+                        <td><strong>{{ commande.prixtotal|number_format(2, ',', ' ') }} €</strong></td>
+                        <td>
+                            <a href="{{ path('app_admin_commandes_show', {id: commande.id}) }}" class="btn btn-sm btn-outline-primary">Voir</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        Aucune commande enregistrée.
+    </div>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,63 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Commande #{{ commande.id }} - Administration{% endblock %}
+
+{% block admin_content %}
+<h1 class="h2 mb-4">Commande #{{ commande.id }}</h1>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card rounded-0 mb-4">
+            <div class="card-header">
+                <h3 class="h5 mb-0">Produits commandés</h3>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Produit</th>
+                            <th>Quantité</th>
+                            <th>Prix unitaire</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commandeProduit in commande.commandeProduits %}
+                            <tr>
+                                <td>{{ commandeProduit.produit.nomProduit }}</td>
+                                <td>{{ commandeProduit.quantite }}</td>
+                                <td>{{ commandeProduit.prixUnitaire|number_format(2, ',', ' ') }} €</td>
+                                <td><strong>{{ (commandeProduit.quantite * commandeProduit.prixUnitaire)|number_format(2, ',', ' ') }} €</strong></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card rounded-0">
+            <div class="card-header">
+                <h3 class="h5 mb-0">Informations</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Date :</strong> {{ commande.datecommande|date('d/m/Y à H:i') }}</p>
+                <p><strong>Total :</strong> <span class="h5">{{ commande.prixtotal|number_format(2, ',', ' ') }} €</span></p>
+                <hr>
+                <h4 class="h6">Client</h4>
+                <p class="mb-1"><strong>{{ commande.user.nom }}</strong></p>
+                <p class="mb-1">{{ commande.user.email }}</p>
+                <p class="mb-1">{{ commande.user.tel }}</p>
+                <p class="mb-0">{{ commande.user.adresse }}</p>
+                {% if commande.facture %}
+                    <hr>
+                    <a href="{{ path('app_commande_facture', {id: commande.id}) }}" class="btn btn-primary w-100 rounded-0">Voir la facture</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{{ path('app_admin_commandes') }}" class="btn btn-outline-secondary rounded-0">Retour aux commandes</a>
+{% endblock %}
+

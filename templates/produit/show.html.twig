@@ -67,21 +67,16 @@
 
             <!-- Bouton ajouter au panier -->
             {% if app.user %}
-                <div class="mb-3">
-                    <p class="text-muted">La fonctionnalité d'ajout au panier sera disponible prochainement.</p>
-                    {# TODO: Activer quand PanierController sera créé
-                    <form action="{{ path('app_panier_add', {id: produit.id}) }}" method="post" class="mb-3">
-                        <div class="input-group mb-3">
-                            <input type="number" name="quantite" value="1" min="1" class="form-control" style="max-width: 100px;">
-                            <button type="submit" class="btn btn-primary">
-                                Ajouter au panier
-                            </button>
-                        </div>
-                    </form>
-                    #}
-                </div>
+                <form action="{{ path('app_panier_ajouter', {id: produit.id}) }}" method="post" class="mb-3">
+                    <div class="input-group mb-3" style="max-width: 300px;">
+                        <input type="number" name="quantite" value="1" min="1" class="form-control rounded-0">
+                        <button type="submit" class="btn btn-primary rounded-0 text-uppercase" style="letter-spacing: 1px;">
+                            Ajouter au panier
+                        </button>
+                    </div>
+                </form>
             {% else %}
-                <a href="{{ path('app_login') }}" class="btn btn-primary">
+                <a href="{{ path('app_login') }}" class="btn btn-primary rounded-0 text-uppercase" style="letter-spacing: 1px;">
                     Connectez-vous pour ajouter au panier
                 </a>
             {% endif %}
@@ -106,13 +101,20 @@
                 <p class="text-muted">Aucun avis pour ce produit pour le moment.</p>
             {% else %}
                 {% for avi in avis %}
-                    <div class="card mb-3">
+                    <div class="card mb-3 rounded-0">
                         <div class="card-body">
-                            <h5 class="card-title">
-                                {{ avi.user.nom ?? 'Anonyme' }}
-                                <small class="text-muted">- {{ avi.date|date('d/m/Y') }}</small>
-                            </h5>
-                            <p class="card-text">{{ avi.contenu }}</p>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title mb-2">
+                                        {{ avi.user.nom ?? 'Anonyme' }}
+                                        <small class="text-muted">- {{ avi.date|date('d/m/Y') }}</small>
+                                    </h5>
+                                    <p class="card-text mb-0">{{ avi.contenu }}</p>
+                                </div>
+                                {% if app.user and avi.user == app.user %}
+                                    <a href="{{ path('app_avis_supprimer', {id: avi.id}) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet avis ?')">Supprimer</a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 {% endfor %}
@@ -122,16 +124,13 @@
             {% if app.user %}
                 <div class="mt-4">
                     <h4>Laisser un avis</h4>
-                    <p class="text-muted">La fonctionnalité d'ajout d'avis sera disponible prochainement.</p>
-                    {# TODO: Activer quand AvisController sera créé
-                    <form action="{{ path('app_avis_add', {id: produit.id}) }}" method="post">
+                    <form action="{{ path('app_avis_creer', {id: produit.id}) }}" method="post">
                         <div class="mb-3">
                             <label for="contenu" class="form-label">Votre avis</label>
-                            <textarea name="contenu" id="contenu" class="form-control" rows="4" required></textarea>
+                            <textarea name="contenu" id="contenu" class="form-control rounded-0" rows="4" required placeholder="Partagez votre expérience avec ce produit..."></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Publier l'avis</button>
+                        <button type="submit" class="btn btn-primary rounded-0 text-uppercase" style="letter-spacing: 1px;">Publier l'avis</button>
                     </form>
-                    #}
                 </div>
             {% else %}
                 <p class="text-muted">

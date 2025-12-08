@@ -1,23 +1,82 @@
 {% extends 'base.html.twig' %}
 
-{% block stylesheets %}
-    <link rel="stylesheet" href="{{ asset('css/register.css') }}">
-{% endblock %}
-
-{% block title %}Register{% endblock %}
+{% block title %}Inscription - Kaira{% endblock %}
 
 {% block body %}
-    <h1>Register</h1>
+<section class="py-5" style="margin-top: 100px; min-height: calc(100vh - 200px); background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card rounded-0 border-0 shadow-sm" style="border-top: 3px solid #8C907E !important;">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <h1 class="h2 mb-2" style="font-family: var(--heading-font, 'Marcellus', serif);">Créer un compte</h1>
+                            <p class="text-muted">Rejoignez-nous et profitez de nos offres exclusives</p>
+                        </div>
 
-    {{ form_errors(registrationForm) }}
+                        {{ form_start(registrationForm, {'attr': {'class': 'needs-validation', 'novalidate': true}}) }}
+                            
+                            {% if not registrationForm.vars.valid %}
+                                <div class="alert alert-danger rounded-0 mb-4">
+                                    <strong>Veuillez corriger les erreurs suivantes :</strong>
+                                    {{ form_errors(registrationForm) }}
+                                </div>
+                            {% endif %}
 
-    {{ form_start(registrationForm) }}
-        {{ form_row(registrationForm.email) }}
-        {{ form_row(registrationForm.plainPassword, {
-            label: 'Password'
-        }) }}
-        {{ form_row(registrationForm.agreeTerms) }}
+                            <div class="mb-3">
+                                {{ form_label(registrationForm.email, null, {'label_attr': {'class': 'form-label fw-semibold'}}) }}
+                                {{ form_widget(registrationForm.email, {'attr': {'class': 'form-control rounded-0'}}) }}
+                                {{ form_errors(registrationForm.email) }}
+                            </div>
 
-        <button type="submit" class="btn">Register</button>
-    {{ form_end(registrationForm) }}
+                            <div class="mb-3">
+                                {{ form_label(registrationForm.nom, null, {'label_attr': {'class': 'form-label fw-semibold'}}) }}
+                                {{ form_widget(registrationForm.nom, {'attr': {'class': 'form-control rounded-0'}}) }}
+                                {{ form_errors(registrationForm.nom) }}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form_label(registrationForm.tel, null, {'label_attr': {'class': 'form-label fw-semibold'}}) }}
+                                {{ form_widget(registrationForm.tel, {'attr': {'class': 'form-control rounded-0'}}) }}
+                                {{ form_errors(registrationForm.tel) }}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form_label(registrationForm.adresse, null, {'label_attr': {'class': 'form-label fw-semibold'}}) }}
+                                {{ form_widget(registrationForm.adresse, {'attr': {'class': 'form-control rounded-0'}}) }}
+                                {{ form_errors(registrationForm.adresse) }}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form_label(registrationForm.plainPassword, null, {'label_attr': {'class': 'form-label fw-semibold'}}) }}
+                                {{ form_widget(registrationForm.plainPassword, {'attr': {'class': 'form-control rounded-0'}}) }}
+                                {{ form_errors(registrationForm.plainPassword) }}
+                                <small class="form-text text-muted">Minimum 6 caractères</small>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    {{ form_widget(registrationForm.agreeTerms, {'attr': {'class': 'form-check-input'}}) }}
+                                    {{ form_label(registrationForm.agreeTerms, null, {'label_attr': {'class': 'form-check-label'}}) }}
+                                    {{ form_errors(registrationForm.agreeTerms) }}
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 rounded-0 text-uppercase py-3" style="letter-spacing: 1px; font-weight: 500;">
+                                S'inscrire
+                            </button>
+                        {{ form_end(registrationForm) }}
+
+                        <div class="text-center mt-4">
+                            <p class="text-muted mb-0">
+                                Vous avez déjà un compte ? 
+                                <a href="{{ path('app_login') }}" class="text-decoration-none fw-semibold" style="color: #8C907E;">Connectez-vous</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

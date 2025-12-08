@@ -1,0 +1,139 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Dashboard - Administration{% endblock %}
+
+{% block admin_content %}
+<h1 class="h2 mb-4">Dashboard Administrateur</h1>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary rounded-0">
+            <div class="card-body">
+                <h5 class="card-title">Total Produits</h5>
+                <h2 class="h3">{{ totalProduits }}</h2>
+                <small class="text-white-50">
+                    Vêtements: {{ vetements }} | 
+                    Chaussures: {{ chaussures }} | 
+                    Accessoires: {{ accessoires }}
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success rounded-0">
+            <div class="card-body">
+                <h5 class="card-title">Total Commandes</h5>
+                <h2 class="h3">{{ totalCommandes }}</h2>
+                <small class="text-white-50">Ce mois: {{ totalCommandesMois }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info rounded-0">
+            <div class="card-body">
+                <h5 class="card-title">Chiffre d'affaires</h5>
+                <h2 class="h3">{{ chiffreAffairesTotal|number_format(2, ',', ' ') }} €</h2>
+                <small class="text-white-50">Ce mois: {{ chiffreAffairesMois|number_format(2, ',', ' ') }} €</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning rounded-0">
+            <div class="card-body">
+                <h5 class="card-title">Clients</h5>
+                <h2 class="h3">{{ totalClients }}</h2>
+                <small class="text-white-50">Promotions actives: {{ totalPromotions }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card rounded-0">
+            <div class="card-header">
+                <h5 class="mb-0">Répartition des produits</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Vêtements</span>
+                        <span>{{ vetements }} ({{ (vetements / totalProduits * 100)|number_format(1) }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ (vetements / totalProduits * 100)|number_format(1) }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Chaussures</span>
+                        <span>{{ chaussures }} ({{ (chaussures / totalProduits * 100)|number_format(1) }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (chaussures / totalProduits * 100)|number_format(1) }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Accessoires</span>
+                        <span>{{ accessoires }} ({{ (accessoires / totalProduits * 100)|number_format(1) }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ (accessoires / totalProduits * 100)|number_format(1) }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card rounded-0">
+            <div class="card-header">
+                <h5 class="mb-0">Actions rapides</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ path('app_admin_produits_nouveau', {type: 'vetement'}) }}" class="btn btn-primary btn-sm rounded-0 mb-2 d-block">Nouveau vêtement</a>
+                <a href="{{ path('app_admin_produits_nouveau', {type: 'chaussure'}) }}" class="btn btn-success btn-sm rounded-0 mb-2 d-block">Nouvelle chaussure</a>
+                <a href="{{ path('app_admin_produits_nouveau', {type: 'accessoire'}) }}" class="btn btn-info btn-sm rounded-0 mb-2 d-block">Nouvel accessoire</a>
+                <a href="{{ path('app_admin_promotions_nouvelle') }}" class="btn btn-warning btn-sm rounded-0 mb-2 d-block">Nouvelle promotion</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card rounded-0">
+    <div class="card-header">
+        <h3 class="h5 mb-0">Commandes récentes</h3>
+    </div>
+    <div class="card-body">
+        {% if commandesRecentes|length > 0 %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>N°</th>
+                        <th>Client</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for commande in commandesRecentes %}
+                        <tr>
+                            <td>#{{ commande.id }}</td>
+                            <td>{{ commande.user.nom }}</td>
+                            <td>{{ commande.datecommande|date('d/m/Y') }}</td>
+                            <td>{{ commande.prixtotal|number_format(2, ',', ' ') }} €</td>
+                            <td>
+                                <a href="{{ path('app_admin_commandes_show', {id: commande.id}) }}" class="btn btn-sm btn-outline-primary">Voir</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted">Aucune commande récente</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

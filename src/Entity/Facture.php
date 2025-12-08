@@ -14,7 +14,7 @@ class Facture
     private ?int $id = null;
 
     #[ORM\OneToOne(inversedBy: 'facture', cascade: ['persist', 'remove'])]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, unique: true)]
     private ?Commande $commande = null;
 
     public function getId(): ?int

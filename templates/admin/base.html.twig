@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .admin-sidebar {
+            min-height: calc(100vh - 80px);
+            background-color: #f8f9fa;
+            padding: 2rem 0;
+            margin-top: 80px;
+        }
+        .admin-content {
+            margin-top: 80px;
+            padding: 2rem 0;
+        }
+        .admin-nav-link {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: #111;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .admin-nav-link:hover,
+        .admin-nav-link.active {
+            background-color: #8C907E;
+            color: white;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-3 admin-sidebar">
+            <div class="px-3">
+                <h3 class="h5 mb-4">Administration</h3>
+                <nav class="nav flex-column">
+                    <a class="admin-nav-link {{ app.request.get('_route') == 'app_admin' ? 'active' : '' }}" href="{{ path('app_admin') }}">
+                        Dashboard
+                    </a>
+                    <a class="admin-nav-link {{ 'app_admin_produits' in app.request.get('_route') ? 'active' : '' }}" href="{{ path('app_admin_produits') }}">
+                        Produits
+                    </a>
+                    <a class="admin-nav-link {{ 'app_admin_promotions' in app.request.get('_route') ? 'active' : '' }}" href="{{ path('app_admin_promotions') }}">
+                        Promotions
+                    </a>
+                    <a class="admin-nav-link {{ 'app_admin_commandes' in app.request.get('_route') ? 'active' : '' }}" href="{{ path('app_admin_commandes') }}">
+                        Commandes
+                    </a>
+                    <a class="admin-nav-link" href="{{ path('app_home') }}">
+                        Retour au site
+                    </a>
+                </nav>
+            </div>
+        </div>
+        <div class="col-md-9 admin-content">
+            {% block admin_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
