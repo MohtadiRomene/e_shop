@@ -1,0 +1,87 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Facture #{{ facture.id }} - Kaira{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 100px;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card rounded-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-5">
+                            <h1 class="h2 mb-2">KAIRA</h1>
+                            <p class="text-muted">Fashion Store</p>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h3 class="h5 mb-3">Facture N°{{ facture.id }}</h3>
+                                <p class="mb-1"><strong>Date :</strong> {{ commande.datecommande|date('d/m/Y') }}</p>
+                                <p class="mb-1"><strong>Commande N° :</strong> 
+                                    {% if commande.numeroCommande %}
+                                        {{ commande.numeroCommande }}
+                                    {% else %}
+                                        #{{ commande.id }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                <h3 class="h5 mb-3">Client</h3>
+                                <p class="mb-1"><strong>{{ commande.user.nom }}</strong></p>
+                                <p class="mb-1">{{ commande.user.email }}</p>
+                                <p class="mb-1">{{ commande.user.adresse }}</p>
+                                <p class="mb-1">{{ commande.user.tel }}</p>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h3 class="h5 mb-3">Détails de la commande</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Produit</th>
+                                    <th class="text-center">Quantité</th>
+                                    <th class="text-end">Prix unitaire</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for commandeProduit in commande.commandeProduits %}
+                                    {% set prixUnitaire = commandeProduit.prixUnitaireAsFloat %}
+                                    {% set totalLigne = commandeProduit.total %}
+                                    <tr>
+                                        <td>{{ commandeProduit.produit.nomProduit }}</td>
+                                        <td class="text-center">{{ commandeProduit.quantite }}</td>
+                                        <td class="text-end">{{ prixUnitaire|number_format(2, ',', ' ') }} €</td>
+                                        <td class="text-end"><strong>{{ totalLigne|number_format(2, ',', ' ') }} €</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Total TTC</strong></td>
+                                    <td class="text-end"><strong class="h5">
+                                        {% if commande.prixtotalAsFloat is defined %}
+                                            {{ commande.prixtotalAsFloat|number_format(2, ',', ' ') }} €
+                                        {% else %}
+                                            {{ commande.prixtotal|number_format(2, ',', ' ') }} €
+                                        {% endif %}
+                                    </strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <div class="text-center mt-5">
+                            <button onclick="window.print()" class="btn btn-primary rounded-0">Imprimer</button>
+                            <a href="{{ path('app_commande_show', {id: commande.id}) }}" class="btn btn-outline-dark rounded-0">Retour</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

@@ -1,0 +1,108 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Commande {{ commande.numeroCommande ?: '#' ~ commande.id }} - Administration{% endblock %}
+
+{% block admin_content %}
+<h1 class="h2 mb-4">
+    Commande 
+    {% if commande.numeroCommande %}
+        {{ commande.numeroCommande }}
+    {% else %}
+        #{{ commande.id }}
+    {% endif %}
+</h1>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card rounded-0 mb-4">
+            <div class="card-header">
+                <h3 class="h5 mb-0">Produits commandés</h3>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Produit</th>
+                            <th>Quantité</th>
+                            <th>Prix unitaire</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commandeProduit in commande.commandeProduits %}
+                            <tr>
+                                <td>{{ commandeProduit.produit.nomProduit }}</td>
+                                <td>{{ commandeProduit.quantite }}</td>
+                                <td>{{ commandeProduit.prixUnitaireAsFloat|number_format(2, ',', ' ') }} €</td>
+                                <td><strong>{{ commandeProduit.total|number_format(2, ',', ' ') }} €</strong></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card rounded-0">
+            <div class="card-header">
+                <h3 class="h5 mb-0">Informations</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>N° Commande :</strong> 
+                    {% if commande.numeroCommande %}
+                        <strong>{{ commande.numeroCommande }}</strong>
+                    {% else %}
+                        #{{ commande.id }}
+                    {% endif %}
+                </p>
+                <p><strong>Date :</strong> {{ commande.datecommande|date('d/m/Y à H:i') }}</p>
+                <p><strong>Statut :</strong>
+                    {% set status = commande.status %}
+                    {% if status == 'pending' %}
+                        <span class="badge bg-warning text-dark">En attente</span>
+                    {% elseif status == 'confirmed' %}
+                        <span class="badge bg-primary">Confirmée</span>
+                    {% elseif status == 'processing' %}
+                        <span class="badge bg-info">En traitement</span>
+                    {% elseif status == 'shipped' %}
+                        <span class="badge bg-info text-dark">Expédiée</span>
+                    {% elseif status == 'delivered' %}
+                        <span class="badge bg-success">Livrée</span>
+                    {% elseif status == 'cancelled' %}
+                        <span class="badge bg-danger">Annulée</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ status }}</span>
+                    {% endif %}
+                </p>
+                <hr>
+                <h4 class="h6 mb-3">Changer le statut</h4>
+                <form method="post" action="{{ path('app_admin_commandes_changer_statut', {id: commande.id}) }}" class="mb-3">
+                    <input type="hidden" name="_token" value="{{ csrf_token('changer_statut_' ~ commande.id) }}">
+                    <select name="statut" class="form-select form-select-sm mb-2" onchange="this.form.submit()">
+                        <option value="pending" {{ commande.status == 'pending' ? 'selected' : '' }}>En attente</option>
+                        <option value="confirmed" {{ commande.status == 'confirmed' ? 'selected' : '' }}>Confirmée</option>
+                        <option value="processing" {{ commande.status == 'processing' ? 'selected' : '' }}>En traitement</option>
+                        <option value="shipped" {{ commande.status == 'shipped' ? 'selected' : '' }}>Expédiée</option>
+                        <option value="delivered" {{ commande.status == 'delivered' ? 'selected' : '' }}>Livrée</option>
+                        <option value="cancelled" {{ commande.status == 'cancelled' ? 'selected' : '' }}>Annulée</option>
+                    </select>
+                </form>
+                <p><strong>Total :</strong> <span class="h5">{{ commande.prixtotal|number_format(2, ',', ' ') }} €</span></p>
+                <hr>
+                <h4 class="h6">Client</h4>
+                <p class="mb-1"><strong>{{ commande.user.nom }}</strong></p>
+                <p class="mb-1">{{ commande.user.email }}</p>
+                <p class="mb-1">{{ commande.user.tel }}</p>
+                <p class="mb-0">{{ commande.user.adresse }}</p>
+                {% if commande.facture %}
+                    <hr>
+                    <a href="{{ path('app_commande_facture', {id: commande.id}) }}" class="btn btn-primary w-100 rounded-0 mb-2">Voir la facture</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{{ path('app_admin_commandes') }}" class="btn btn-outline-secondary rounded-0">Retour aux commandes</a>
+{% endblock %}
+

@@ -1,0 +1,54 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Produits - Administration{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">Produits</h1>
+    <div>
+        <a href="{{ path('app_admin_produits_nouveau', {type: 'vetement'}) }}" class="btn btn-primary rounded-0">Nouveau Vêtement</a>
+        <a href="{{ path('app_admin_produits_nouveau', {type: 'chaussure'}) }}" class="btn btn-primary rounded-0">Nouvelle Chaussure</a>
+        <a href="{{ path('app_admin_produits_nouveau', {type: 'accessoire'}) }}" class="btn btn-primary rounded-0">Nouvel Accessoire</a>
+    </div>
+</div>
+
+{% if produits|length > 0 %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nom</th>
+                    <th>Type</th>
+                    <th>Prix</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for produit in produits %}
+                    <tr>
+                        <td>{{ produit.id }}</td>
+                        <td><strong>{{ produit.nomProduit }}</strong></td>
+                        <td>
+                            <span class="badge bg-secondary">{{ produit.type }}</span>
+                        </td>
+                        <td>{{ produit.prix|number_format(2, ',', ' ') }} €</td>
+                        <td>
+                            <a href="{{ path('app_admin_produits_modifier', {id: produit.id}) }}" class="btn btn-sm btn-outline-primary">Modifier</a>
+                            <form method="post" action="{{ path('app_admin_produits_supprimer', {id: produit.id}) }}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ produit.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        Aucun produit enregistré. <a href="{{ path('app_admin_produits_nouveau') }}">Créer le premier produit</a>
+    </div>
+{% endif %}
+{% endblock %}
+

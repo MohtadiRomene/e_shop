@@ -1,0 +1,254 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Accueil - Kaira Fashion Store{% endblock %}
+
+{% block body %}
+{# Hero Banner Section - Original Template Style #}
+<section class="slideshow swiper slide-clip" style="height: 80vh; min-height: 600px;">
+  <div class="swiper-wrapper">
+    <div class="swiper-slide" style="background-image: url('{{ asset('images/banner-image-1.jpg') }}'); background-size: cover; background-position: center;">
+      <div class="image-holder position-absolute top-0 start-0 w-100 h-100" style="background-image: url('{{ asset('images/banner-image-1.jpg') }}'); background-size: cover; background-position: center;"></div>
+      <div class="banner-content d-flex align-items-center justify-content-center h-100 text-white position-relative" style="z-index: 2;">
+        <div class="container text-center">
+          <h2 class="display-2 mb-4 txt-fx slide-up">
+            <span class="word"><span class="letter">N</span><span class="letter">e</span><span class="letter">w</span></span>
+            <span class="letter">&nbsp;</span>
+            <span class="word"><span class="letter">C</span><span class="letter">o</span><span class="letter">l</span><span class="letter">l</span><span class="letter">e</span><span class="letter">c</span><span class="letter">t</span><span class="letter">i</span><span class="letter">o</span><span class="letter">n</span><span class="letter">s</span></span>
+          </h2>
+          <p class="lead mb-5" style="max-width: 600px; margin: 0 auto;" data-aos="fade-up" data-aos-delay="200">
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Saepe voluptas ut dolorum consequuntur, adipisci repellat! Eveniet commodi voluptatem voluptate, eum minima, in suscipit explicabo voluptatibus harum, quibusdam ex repellat eaque!
+          </p>
+          <a href="#products" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Shop Now</a>
+        </div>
+      </div>
+    </div>
+    <div class="swiper-slide" style="background-image: url('{{ asset('images/banner-image-2.jpg') }}');">
+      <div class="image-holder position-absolute top-0 start-0 w-100 h-100" style="background-image: url('{{ asset('images/banner-image-2.jpg') }}'); background-size: cover; background-position: center;"></div>
+      <div class="banner-content d-flex align-items-center justify-content-center h-100 text-white position-relative" style="z-index: 2;">
+        <div class="container text-center">
+          <h2 class="display-2 mb-4 txt-fx slide-up">Fashion Trends</h2>
+          <p class="lead mb-5" style="max-width: 600px; margin: 0 auto;" data-aos="fade-up" data-aos-delay="200">
+            Discover the latest fashion trends and elevate your style with our premium collection.
+          </p>
+          <a href="#products" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Explore</a>
+        </div>
+      </div>
+    </div>
+    <div class="swiper-slide" style="background-image: url('{{ asset('images/banner-image-3.jpg') }}');">
+      <div class="image-holder position-absolute top-0 start-0 w-100 h-100" style="background-image: url('{{ asset('images/banner-image-3.jpg') }}'); background-size: cover; background-position: center;"></div>
+      <div class="banner-content d-flex align-items-center justify-content-center h-100 text-white position-relative" style="z-index: 2;">
+        <div class="container text-center">
+          <h2 class="display-2 mb-4 txt-fx slide-up">Premium Quality</h2>
+          <p class="lead mb-5" style="max-width: 600px; margin: 0 auto;" data-aos="fade-up" data-aos-delay="200">
+            Experience luxury and comfort with our carefully curated selection of premium fashion items.
+          </p>
+          <a href="#products" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Discover</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="swiper-pagination"></div>
+  <button class="swiper-button-prev icon-arrow icon-arrow-left" aria-label="Previous slide"></button>
+  <button class="swiper-button-next icon-arrow icon-arrow-right" aria-label="Next slide"></button>
+</section>
+
+{# Product Collections Section - Original Style #}
+<section id="products" class="py-5 my-5">
+  <div class="container">
+    <div class="text-center mb-5" data-aos="fade-up">
+      <h2 class="h1 mb-3">Featured Products</h2>
+      <p class="text-muted">Discover our handpicked selection of premium fashion items</p>
+    </div>
+    <div class="row g-4 mb-5">
+      {# Product Card 1 #}
+      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
+        <div class="product-item position-relative h-100">
+          <div class="position-relative mb-4 image-zoom-effect" style="height: 500px; overflow: hidden;">
+            <div class="image-holder">
+              <img src="{{ asset('images/product-item-1.jpg') }}" alt="Soft Leather Jacket" class="w-100 h-100" style="object-fit: cover;">
+            </div>
+            <button class="btn-wishlist btn btn-sm" type="button" aria-label="Add to wishlist">
+              <svg width="20" height="20" fill="currentColor"><use href="#heart"></use></svg>
+            </button>
+            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-white" style="transform: translateY(100%); transition: transform 0.3s;">
+              <button class="btn btn-primary w-100 rounded-0 text-uppercase add-to-cart" style="letter-spacing: 1px;">Add to Cart</button>
+            </div>
+          </div>
+          <h3 class="h4 mb-3">SOFT LEATHER JACKETS</h3>
+          <p class="text-muted mb-3">
+            <strong class="text-dark">$299.00</strong>
+          </p>
+          <p class="text-muted mb-4 small">
+            Scelerisque duis aliquam qui lorem ipsum dolor amet, consectetur adipiscing elit.
+          </p>
+          <a href="#" class="btn btn-outline-dark rounded-0 text-uppercase border-animation" style="letter-spacing: 1px;">DISCOVER NOW</a>
+        </div>
+      </div>
+
+      {# Product Card 2 #}
+      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
+        <div class="product-item position-relative h-100">
+          <div class="position-relative mb-4 image-zoom-effect" style="height: 500px; overflow: hidden;">
+            <div class="image-holder">
+              <img src="{{ asset('images/product-item-2.jpg') }}" alt="Soft Leather Jacket" class="w-100 h-100" style="object-fit: cover;">
+            </div>
+            <button class="btn-wishlist btn btn-sm" type="button" aria-label="Add to wishlist">
+              <svg width="20" height="20" fill="currentColor"><use href="#heart"></use></svg>
+            </button>
+            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-white" style="transform: translateY(100%); transition: transform 0.3s;">
+              <button class="btn btn-primary w-100 rounded-0 text-uppercase add-to-cart" style="letter-spacing: 1px;">Add to Cart</button>
+            </div>
+          </div>
+          <h3 class="h4 mb-3">SOFT LEATHER JACKETS</h3>
+          <p class="text-muted mb-3">
+            <strong class="text-dark">$349.00</strong>
+          </p>
+          <p class="text-muted mb-4 small">
+            Scelerisque duis aliquam qui lorem ipsum dolor amet, consectetur adipiscing elit.
+          </p>
+          <a href="#" class="btn btn-outline-dark rounded-0 text-uppercase border-animation" style="letter-spacing: 1px;">DISCOVER NOW</a>
+        </div>
+      </div>
+
+      {# Product Card 3 #}
+      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
+        <div class="product-item position-relative h-100">
+          <div class="position-relative mb-4 image-zoom-effect" style="height: 500px; overflow: hidden;">
+            <div class="image-holder">
+              <img src="{{ asset('images/product-item-3.jpg') }}" alt="Soft Leather Jacket" class="w-100 h-100" style="object-fit: cover;">
+            </div>
+            <button class="btn-wishlist btn btn-sm" type="button" aria-label="Add to wishlist">
+              <svg width="20" height="20" fill="currentColor"><use href="#heart"></use></svg>
+            </button>
+            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-white" style="transform: translateY(100%); transition: transform 0.3s;">
+              <button class="btn btn-primary w-100 rounded-0 text-uppercase add-to-cart" style="letter-spacing: 1px;">Add to Cart</button>
+            </div>
+          </div>
+          <h3 class="h4 mb-3">SOFT LEATHER JACKETS</h3>
+          <p class="text-muted mb-3">
+            <strong class="text-dark">$279.00</strong>
+          </p>
+          <p class="text-muted mb-4 small">
+            Scelerisque duis aliquam qui lorem ipsum dolor amet, consectetur adipiscing elit.
+          </p>
+          <a href="#" class="btn btn-outline-dark rounded-0 text-uppercase border-animation" style="letter-spacing: 1px;">DISCOVER NOW</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# Category Section - Original Style #}
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="text-center mb-5" data-aos="fade-up">
+      <h2 class="h1 mb-3">Shop by Category</h2>
+      <p class="text-muted">Browse our collections</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
+        <div class="image-zoom-effect position-relative swipe-up" style="cursor: pointer;">
+          <div class="image-holder">
+            <img src="{{ asset('images/cat-item1.jpg') }}" alt="Category" class="w-100" style="height: 400px; object-fit: cover;">
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 p-4 text-white text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+            <h3 class="h4 mb-2">Women's Fashion</h3>
+            <a href="#" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
+        <div class="image-zoom-effect position-relative swipe-up" style="cursor: pointer;">
+          <div class="image-holder">
+            <img src="{{ asset('images/cat-item2.jpg') }}" alt="Category" class="w-100" style="height: 400px; object-fit: cover;">
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 p-4 text-white text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+            <h3 class="h4 mb-2">Men's Fashion</h3>
+            <a href="#" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
+        <div class="image-zoom-effect position-relative swipe-up" style="cursor: pointer;">
+          <div class="image-holder">
+            <img src="{{ asset('images/cat-item3.jpg') }}" alt="Category" class="w-100" style="height: 400px; object-fit: cover;">
+          </div>
+          <div class="position-absolute bottom-0 start-0 end-0 p-4 text-white text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+            <h3 class="h4 mb-2">Accessories</h3>
+            <a href="#" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# Newsletter Section - Original Style #}
+<section class="py-5 position-relative" style="background: url('{{ asset('images/bg-newsletter.jpg') }}') center/cover no-repeat; min-height: 400px;">
+  <div class="background pattern-bg"></div>
+  <div class="container position-relative" style="z-index: 1;">
+    <div class="row justify-content-center text-center text-white">
+      <div class="col-lg-8" data-aos="fade-up">
+        <h2 class="h1 mb-4">Subscribe to Our Newsletter</h2>
+        <p class="lead mb-5">Get the latest updates on new products and upcoming sales</p>
+        <form class="newsletter-form d-flex gap-2 justify-content-center" style="max-width: 500px; margin: 0 auto;">
+          <input type="email" class="form-control rounded-0" placeholder="Enter your email" required style="background: rgba(255,255,255,0.9);">
+          <button type="submit" class="btn btn-primary rounded-0 text-uppercase px-4" style="letter-spacing: 1px;">Subscribe</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script>
+    // Initialize Swiper with original template settings
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof Swiper !== 'undefined') {
+        const slideshow = document.querySelector('.slideshow.swiper');
+        if (slideshow) {
+          new Swiper(slideshow, {
+            slidesPerView: 1,
+            spaceBetween: 0,
+            speed: 1000,
+            loop: true,
+            autoplay: {
+              delay: 5000,
+              disableOnInteraction: false,
+            },
+            navigation: {
+              nextEl: '.icon-arrow-right',
+              prevEl: '.icon-arrow-left',
+            },
+            pagination: {
+              el: '.swiper-pagination',
+              clickable: true,
+            },
+          });
+        }
+      }
+
+      // Text effects initialization (like original template)
+      const txtFxElements = document.querySelectorAll('.txt-fx');
+      txtFxElements.forEach(function(element) {
+        let html = '';
+        let t = 0;
+        const words = element.textContent.split(/\s/);
+        
+        words.forEach(function(word) {
+          html += '<span class="word">';
+          for (let o = 0; o < word.length; o++) {
+            html += '<span class="letter" style="transition-delay:' + (300 + 10 * t) + 'ms;">' + word[o] + '</span>';
+            t++;
+          }
+          html += '</span>';
+          html += '<span class="letter" style="transition-delay:300ms;">&nbsp;</span>';
+          t++;
+        });
+        element.innerHTML = html;
+      });
+    });
+  </script>
+{% endblock %}

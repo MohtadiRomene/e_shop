@@ -1,0 +1,48 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Promotions - Administration{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">Promotions</h1>
+    <a href="{{ path('app_admin_promotions_nouvelle') }}" class="btn btn-primary rounded-0">Nouvelle Promotion</a>
+</div>
+
+{% if promotions|length > 0 %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Réduction</th>
+                    <th>Date d'expiration</th>
+                    <th>Produits</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for promotion in promotions %}
+                    <tr>
+                        <td>{{ promotion.id }}</td>
+                        <td><strong>{{ promotion.reduction }}%</strong></td>
+                        <td>{{ promotion.dateExpiration|date('d/m/Y') }}</td>
+                        <td>{{ promotion.produits|length }} produit(s)</td>
+                        <td>
+                            <a href="{{ path('app_admin_promotions_modifier', {id: promotion.id}) }}" class="btn btn-sm btn-outline-primary">Modifier</a>
+                            <form method="post" action="{{ path('app_admin_promotions_supprimer', {id: promotion.id}) }}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette promotion ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ promotion.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        Aucune promotion enregistrée. <a href="{{ path('app_admin_promotions_nouvelle') }}">Créer la première promotion</a>
+    </div>
+{% endif %}
+{% endblock %}
+

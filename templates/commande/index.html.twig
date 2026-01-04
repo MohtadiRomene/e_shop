@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes Commandes - Kaira{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 100px;">
+    <div class="container">
+        <h1 class="h2 mb-4">Mes Commandes</h1>
+
+        {% if commandes|length > 0 %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>N° Commande</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commande in commandes %}
+                            <tr>
+                                <td>
+                                    {% if commande.numeroCommande %}
+                                        <strong>{{ commande.numeroCommande }}</strong>
+                                    {% else %}
+                                        #{{ commande.id }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ commande.datecommande|date('d/m/Y à H:i') }}</td>
+                                <td><strong>
+                                    {% if commande.prixtotalAsFloat is defined %}
+                                        {{ commande.prixtotalAsFloat|number_format(2, ',', ' ') }} €
+                                    {% else %}
+                                        {{ commande.prixtotal|number_format(2, ',', ' ') }} €
+                                    {% endif %}
+                                </strong></td>
+                                <td>
+                                    {% set status = commande.status %}
+                                    {% if status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">En attente</span>
+                                    {% elseif status == 'confirmed' %}
+                                        <span class="badge bg-primary">Confirmée</span>
+                                    {% elseif status == 'processing' %}
+                                        <span class="badge bg-info">En traitement</span>
+                                    {% elseif status == 'shipped' %}
+                                        <span class="badge bg-info text-dark">Expédiée</span>
+                                    {% elseif status == 'delivered' %}
+                                        <span class="badge bg-success">Livrée</span>
+                                    {% elseif status == 'cancelled' %}
+                                        <span class="badge bg-danger">Annulée</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ path('app_commande_show', {id: commande.id}) }}" class="btn btn-sm btn-outline-primary">Voir</a>
+                                    {% if commande.facture %}
+                                        <a href="{{ path('app_commande_facture', {id: commande.id}) }}" class="btn btn-sm btn-outline-secondary">Facture</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <h3 class="h4 mb-3">Aucune commande</h3>
+                <p class="text-muted mb-4">Vous n'avez pas encore passé de commande.</p>
+                <a href="{{ path('app_produits') }}" class="btn btn-primary rounded-0 text-uppercase px-5" style="letter-spacing: 1px;">Voir les produits</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+

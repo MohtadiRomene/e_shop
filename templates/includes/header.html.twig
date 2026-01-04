@@ -1,0 +1,95 @@
+{# Header avec navigation #}
+<header class="navbar navbar-expand-lg navbar-light fixed-top bg-white shadow-sm gpu-accelerated">
+  <div class="container">
+    <a class="navbar-brand fw-bold fade-in" href="{{ path('app_home') }}" style="font-size: 1.5rem; color: #111; font-family: var(--heading-font, 'Marcellus', serif); transition: transform 0.3s ease;">
+      KAIRA
+    </a>
+    
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav mx-auto">
+        <li class="nav-item">
+          <a class="nav-link active fw-normal text-uppercase" href="{{ path('app_home') }}" style="letter-spacing: 0.5px; font-size: 0.9rem;">
+            HOME 
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display: inline-block; margin-left: 2px;">
+              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link fw-normal text-uppercase" href="{{ path('app_produits') }}" style="letter-spacing: 0.5px; font-size: 0.9rem;">
+            SHOP 
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display: inline-block; margin-left: 2px;">
+              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link fw-normal text-uppercase" href="#" style="letter-spacing: 0.5px; font-size: 0.9rem;">
+            BLOG 
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display: inline-block; margin-left: 2px;">
+              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link fw-normal text-uppercase" href="#" style="letter-spacing: 0.5px; font-size: 0.9rem;">
+            PAGES 
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display: inline-block; margin-left: 2px;">
+              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+            </svg>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link fw-normal text-uppercase" href="#" style="letter-spacing: 0.5px; font-size: 0.9rem;">CONTACT</a>
+        </li>
+      </ul>
+      
+      <div class="d-flex align-items-center gap-3">
+        {% if app.user %}
+          {# Utilisateur connecté #}
+          <a href="{{ path('app_panier') }}" class="nav-link text-decoration-none d-flex align-items-center gap-1 cart-link ripple-effect position-relative" style="font-size: 0.85rem; color: #111; transition: transform 0.2s ease;">
+            <svg width="18" height="18" fill="currentColor" style="transition: transform 0.3s ease;"><use href="#cart"></use></svg>
+            <span class="text-uppercase cart-count" style="letter-spacing: 0.5px;">CART</span>
+            {% if app.user and app.user.panier %}
+              {% set nbItems = app.user.panier.panierProduits|length %}
+              {% if nbItems > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem; padding: 2px 5px;">
+                  {{ nbItems }}
+                  <span class="visually-hidden">articles dans le panier</span>
+                </span>
+              {% endif %}
+            {% endif %}
+          </a>
+          <div class="dropdown">
+            <a class="nav-link text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #111; font-size: 0.85rem;">
+              {{ app.user.nom }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{{ path('app_commandes') }}">Mes Commandes</a></li>
+              {% if 'ROLE_ADMIN' in app.user.roles %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ path('app_admin') }}">Administration</a></li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{{ path('app_logout') }}">Déconnexion</a></li>
+            </ul>
+          </div>
+        {% else %}
+          {# Utilisateur non connecté #}
+          <a href="{{ path('app_login') }}" class="nav-link text-decoration-none" style="font-size: 0.85rem; color: #111;">Connexion</a>
+          <a href="{{ path('app_register') }}" class="btn btn-outline-dark btn-sm rounded-0 text-uppercase" style="letter-spacing: 0.5px;">Inscription</a>
+        {% endif %}
+        <a href="#" class="nav-link text-decoration-none search-trigger ripple-effect" style="color: #111; transition: transform 0.2s ease;" data-bs-toggle="modal" data-bs-target="#searchModal">
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16" style="transition: transform 0.3s ease;">
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
