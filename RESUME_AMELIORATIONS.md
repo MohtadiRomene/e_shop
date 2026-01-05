@@ -140,3 +140,4 @@ Toutes les entités principales utilisent maintenant le trait `TimestampableTrai
 ---
 
 **Bon développement ! 🚀**
+

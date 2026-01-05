@@ -43,8 +43,24 @@ class PanierController extends AbstractController
         try {
             $cartService->addProductToCart($produit, $quantite);
             $this->addFlash('success', 'Produit ajouté au panier avec succès !');
+            
+            // Si c'est une requête AJAX, retourner une réponse JSON
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => true,
+                    'message' => 'Produit ajouté au panier avec succès !'
+                ]);
+            }
         } catch (\Exception $e) {
             $this->addFlash('error', $e->getMessage());
+            
+            // Si c'est une requête AJAX, retourner une réponse JSON avec erreur
+            if ($request->isXmlHttpRequest()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], 400);
+            }
         }
 
         // Rediriger vers la page précédente ou le panier
@@ -66,7 +82,7 @@ class PanierController extends AbstractController
 
         try {
             $cartService->updateProductQuantity($panierProduit, $quantite);
-            $this->addFlash('success', 'Panier mis à jour !');
+        $this->addFlash('success', 'Panier mis à jour !');
         } catch (\Exception $e) {
             $this->addFlash('error', $e->getMessage());
         }
@@ -81,7 +97,7 @@ class PanierController extends AbstractController
     ): Response {
         try {
             $cartService->removeProductFromCart($panierProduit);
-            $this->addFlash('success', 'Produit retiré du panier !');
+        $this->addFlash('success', 'Produit retiré du panier !');
         } catch (\Exception $e) {
             $this->addFlash('error', $e->getMessage());
         }

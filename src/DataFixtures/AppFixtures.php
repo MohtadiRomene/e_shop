@@ -56,11 +56,11 @@ class AppFixtures extends Fixture
 
         // Créer des vêtements
         $vetements = [
-            ['nom' => 'Veste en Cuir Classique', 'prix' => 299.00, 'taille' => 'M', 'couleur' => 'Noir', 'genre' => 'Homme'],
-            ['nom' => 'Robe Élégante Soirée', 'prix' => 189.00, 'taille' => 'S', 'couleur' => 'Rouge', 'genre' => 'Femme'],
-            ['nom' => 'Pull en Laine Douce', 'prix' => 79.00, 'taille' => 'L', 'couleur' => 'Beige', 'genre' => 'Unisexe'],
-            ['nom' => 'Chemise Blanche Formelle', 'prix' => 89.00, 'taille' => 'M', 'couleur' => 'Blanc', 'genre' => 'Homme'],
-            ['nom' => 'Jupe Midi Plissée', 'prix' => 69.00, 'taille' => 'S', 'couleur' => 'Bleu', 'genre' => 'Femme'],
+            ['nom' => 'Veste en Cuir Classique', 'prix' => 299.00, 'taille' => 'M', 'couleur' => 'Noir', 'genre' => 'Homme', 'image' => 'product-item-1.jpg'],
+            ['nom' => 'Robe Élégante Soirée', 'prix' => 189.00, 'taille' => 'S', 'couleur' => 'Rouge', 'genre' => 'Femme', 'image' => 'product-item-2.jpg'],
+            ['nom' => 'Pull en Laine Douce', 'prix' => 79.00, 'taille' => 'L', 'couleur' => 'Beige', 'genre' => 'Unisexe', 'image' => 'product-item-3.jpg'],
+            ['nom' => 'Chemise Blanche Formelle', 'prix' => 89.00, 'taille' => 'M', 'couleur' => 'Blanc', 'genre' => 'Homme', 'image' => 'product-item-4.jpg'],
+            ['nom' => 'Jupe Midi Plissée', 'prix' => 69.00, 'taille' => 'S', 'couleur' => 'Bleu', 'genre' => 'Femme', 'image' => 'product-item-5.jpg'],
         ];
 
         foreach ($vetements as $vetementData) {
@@ -70,6 +70,7 @@ class AppFixtures extends Fixture
             $vetement->setTaille($vetementData['taille']);
             $vetement->setCouleur($vetementData['couleur']);
             $vetement->setGenre($vetementData['genre']);
+            $vetement->setImage($vetementData['image']);
             // Définir le stock (entre 10 et 50 unités aléatoirement)
             $stock = rand(10, 50);
             $vetement->setStock($stock);
@@ -79,11 +80,11 @@ class AppFixtures extends Fixture
 
         // Créer des chaussures
         $chaussures = [
-            ['nom' => 'Baskets Sport Premium', 'prix' => 129.00, 'pointure' => 42],
-            ['nom' => 'Escarpins Élégants', 'prix' => 149.00, 'pointure' => 38],
-            ['nom' => 'Bottes en Cuir', 'prix' => 199.00, 'pointure' => 40],
-            ['nom' => 'Mocassins Classiques', 'prix' => 119.00, 'pointure' => 41],
-            ['nom' => 'Sandales Été', 'prix' => 59.00, 'pointure' => 39],
+            ['nom' => 'Baskets Sport Premium', 'prix' => 129.00, 'pointure' => 42, 'image' => 'product-item-6.jpg'],
+            ['nom' => 'Escarpins Élégants', 'prix' => 149.00, 'pointure' => 38, 'image' => 'product-item-7.jpg'],
+            ['nom' => 'Bottes en Cuir', 'prix' => 199.00, 'pointure' => 40, 'image' => 'product-item-8.jpg'],
+            ['nom' => 'Mocassins Classiques', 'prix' => 119.00, 'pointure' => 41, 'image' => 'product-item-9.jpg'],
+            ['nom' => 'Sandales Été', 'prix' => 59.00, 'pointure' => 39, 'image' => 'product-item-10.jpg'],
         ];
 
         foreach ($chaussures as $chaussureData) {
@@ -91,6 +92,7 @@ class AppFixtures extends Fixture
             $chaussure->setNomProduit($chaussureData['nom']);
             $chaussure->setPrix($chaussureData['prix']);
             $chaussure->setPointure($chaussureData['pointure']);
+            $chaussure->setImage($chaussureData['image']);
             // Définir le stock (entre 10 et 50 unités aléatoirement)
             $stock = rand(10, 50);
             $chaussure->setStock($stock);
@@ -100,11 +102,11 @@ class AppFixtures extends Fixture
 
         // Créer des accessoires
         $accessoires = [
-            ['nom' => 'Sac à Main Cuir', 'prix' => 179.00, 'type' => 'Sac'],
-            ['nom' => 'Ceinture en Cuir', 'prix' => 49.00, 'type' => 'Ceinture'],
-            ['nom' => 'Montre Élégante', 'prix' => 299.00, 'type' => 'Montre'],
-            ['nom' => 'Lunettes de Soleil', 'prix' => 89.00, 'type' => 'Lunettes'],
-            ['nom' => 'Collier Perles', 'prix' => 129.00, 'type' => 'Bijoux'],
+            ['nom' => 'Sac à Main Cuir', 'prix' => 179.00, 'type' => 'Sac', 'image' => 'wishlist-item1.jpg'],
+            ['nom' => 'Ceinture en Cuir', 'prix' => 49.00, 'type' => 'Ceinture', 'image' => 'wishlist-item2.jpg'],
+            ['nom' => 'Montre Élégante', 'prix' => 299.00, 'type' => 'Montre', 'image' => 'wishlist-item3.jpg'],
+            ['nom' => 'Lunettes de Soleil', 'prix' => 89.00, 'type' => 'Lunettes', 'image' => 'product-item-1.jpg'],
+            ['nom' => 'Collier Perles', 'prix' => 129.00, 'type' => 'Bijoux', 'image' => 'product-item-2.jpg'],
         ];
 
         foreach ($accessoires as $accessoireData) {
@@ -112,6 +114,7 @@ class AppFixtures extends Fixture
             $accessoire->setNomProduit($accessoireData['nom']);
             $accessoire->setPrix($accessoireData['prix']);
             $accessoire->setAccessoireType($accessoireData['type']);
+            $accessoire->setImage($accessoireData['image']);
             // Définir le stock (entre 10 et 50 unités aléatoirement)
             $stock = rand(10, 50);
             $accessoire->setStock($stock);

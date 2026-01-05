@@ -207,3 +207,4 @@ Votre site e-commerce est maintenant **100% fonctionnel et professionnel** !
 4. Préparer pour la production
 
 **Bon succès avec votre site e-commerce ! 🚀**
+

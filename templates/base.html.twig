@@ -203,6 +203,54 @@
       });
     </script>
     
+    {# Fix Bootstrap Dropdowns with Turbo #}
+    <script>
+      (function() {
+        function initDropdowns() {
+          // Réinitialiser tous les dropdowns Bootstrap
+          const dropdownToggles = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+          dropdownToggles.forEach(toggle => {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+              try {
+                // Détruire l'instance existante si elle existe
+                const existingInstance = bootstrap.Dropdown.getInstance(toggle);
+                if (existingInstance) {
+                  existingInstance.dispose();
+                }
+                
+                // Créer une nouvelle instance
+                new bootstrap.Dropdown(toggle, {
+                  boundary: 'viewport',
+                  popperConfig: {
+                    placement: 'bottom-end'
+                  }
+                });
+              } catch (e) {
+                console.warn('Erreur lors de l\'initialisation du dropdown:', e);
+              }
+            }
+          });
+        }
+
+        // Initialiser au chargement initial
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initDropdowns);
+        } else {
+          initDropdowns();
+        }
+
+        // Réinitialiser après chaque navigation Turbo
+        if (typeof Turbo !== 'undefined') {
+          document.addEventListener('turbo:load', initDropdowns);
+          document.addEventListener('turbo:render', initDropdowns);
+          document.addEventListener('turbo:frame-load', initDropdowns);
+        }
+
+        // Fallback : réinitialiser après un court délai (pour les cas où Turbo n'est pas détecté)
+        setTimeout(initDropdowns, 100);
+      })();
+    </script>
+    
     {# Asset Mapper - JavaScript #}
     {{ importmap('app') }}
   {% endblock %}

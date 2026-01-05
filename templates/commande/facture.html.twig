@@ -75,7 +75,11 @@
 
                         <div class="text-center mt-5">
                             <button onclick="window.print()" class="btn btn-primary rounded-0">Imprimer</button>
-                            <a href="{{ path('app_commande_show', {id: commande.id}) }}" class="btn btn-outline-dark rounded-0">Retour</a>
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <a href="{{ path('app_admin_commandes_show', {id: commande.id}) }}" class="btn btn-outline-dark rounded-0">Retour</a>
+                            {% else %}
+                                <a href="{{ path('app_commande_show', {id: commande.id}) }}" class="btn btn-outline-dark rounded-0">Retour</a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

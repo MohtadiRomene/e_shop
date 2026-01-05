@@ -36,8 +36,8 @@ class CommandeController extends AbstractController
     {
         $user = $this->getUser();
 
-        // Vérifier que la commande appartient à l'utilisateur
-        if ($commande->getUser() !== $user) {
+        // Les admins peuvent voir toutes les commandes, les utilisateurs uniquement les leurs
+        if (!$this->isGranted('ROLE_ADMIN') && $commande->getUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
 

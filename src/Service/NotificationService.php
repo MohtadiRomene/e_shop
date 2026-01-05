@@ -112,3 +112,4 @@ class NotificationService
         $this->mailer->send($email);
     }
 }
+

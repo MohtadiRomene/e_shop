@@ -28,7 +28,7 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link fw-normal text-uppercase" href="#" style="letter-spacing: 0.5px; font-size: 0.9rem;">
+          <a class="nav-link fw-normal text-uppercase" href="{{ path('app_blog') }}" style="letter-spacing: 0.5px; font-size: 0.9rem;">
             BLOG 
             <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display: inline-block; margin-left: 2px;">
               <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
@@ -36,7 +36,7 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link fw-normal text-uppercase" href="#" style="letter-spacing: 0.5px; font-size: 0.9rem;">
+          <a class="nav-link fw-normal text-uppercase" href="{{ path('app_pages') }}" style="letter-spacing: 0.5px; font-size: 0.9rem;">
             PAGES 
             <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display: inline-block; margin-left: 2px;">
               <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
@@ -44,7 +44,7 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link fw-normal text-uppercase" href="#" style="letter-spacing: 0.5px; font-size: 0.9rem;">CONTACT</a>
+          <a class="nav-link fw-normal text-uppercase" href="{{ path('app_contact') }}" style="letter-spacing: 0.5px; font-size: 0.9rem;">CONTACT</a>
         </li>
       </ul>
       
@@ -64,11 +64,11 @@
               {% endif %}
             {% endif %}
           </a>
-          <div class="dropdown">
-            <a class="nav-link text-decoration-none dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #111; font-size: 0.85rem;">
+          <div class="dropdown" id="userDropdown">
+            <a class="nav-link text-decoration-none dropdown-toggle" href="#" role="button" id="userDropdownToggle" data-bs-toggle="dropdown" aria-expanded="false" style="color: #111; font-size: 0.85rem; cursor: pointer;">
               {{ app.user.nom }}
             </a>
-            <ul class="dropdown-menu dropdown-menu-end">
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownToggle">
               <li><a class="dropdown-item" href="{{ path('app_commandes') }}">Mes Commandes</a></li>
               {% if 'ROLE_ADMIN' in app.user.roles %}
                 <li><hr class="dropdown-divider"></li>

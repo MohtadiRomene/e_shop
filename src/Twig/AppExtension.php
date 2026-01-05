@@ -27,3 +27,4 @@ class AppExtension extends AbstractExtension
         return number_format($floatPrice, 2, ',', ' ');
     }
 }
+

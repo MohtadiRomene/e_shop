@@ -18,7 +18,7 @@
           <p class="lead mb-5" style="max-width: 600px; margin: 0 auto;" data-aos="fade-up" data-aos-delay="200">
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Saepe voluptas ut dolorum consequuntur, adipisci repellat! Eveniet commodi voluptatem voluptate, eum minima, in suscipit explicabo voluptatibus harum, quibusdam ex repellat eaque!
           </p>
-          <a href="#products" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Shop Now</a>
+          <a href="{{ path('app_produits') }}" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Shop Now</a>
         </div>
       </div>
     </div>
@@ -30,7 +30,7 @@
           <p class="lead mb-5" style="max-width: 600px; margin: 0 auto;" data-aos="fade-up" data-aos-delay="200">
             Discover the latest fashion trends and elevate your style with our premium collection.
           </p>
-          <a href="#products" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Explore</a>
+          <a href="{{ path('app_produits') }}" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Explore</a>
         </div>
       </div>
     </div>
@@ -42,7 +42,7 @@
           <p class="lead mb-5" style="max-width: 600px; margin: 0 auto;" data-aos="fade-up" data-aos-delay="200">
             Experience luxury and comfort with our carefully curated selection of premium fashion items.
           </p>
-          <a href="#products" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Discover</a>
+          <a href="{{ path('app_produits') }}" class="btn btn-primary btn-lg rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;" data-aos="fade-up" data-aos-delay="400">Discover</a>
         </div>
       </div>
     </div>
@@ -60,80 +60,77 @@
       <p class="text-muted">Discover our handpicked selection of premium fashion items</p>
     </div>
     <div class="row g-4 mb-5">
-      {# Product Card 1 #}
-      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
-        <div class="product-item position-relative h-100">
-          <div class="position-relative mb-4 image-zoom-effect" style="height: 500px; overflow: hidden;">
-            <div class="image-holder">
-              <img src="{{ asset('images/product-item-1.jpg') }}" alt="Soft Leather Jacket" class="w-100 h-100" style="object-fit: cover;">
-            </div>
-            <button class="btn-wishlist btn btn-sm" type="button" aria-label="Add to wishlist">
-              <svg width="20" height="20" fill="currentColor"><use href="#heart"></use></svg>
-            </button>
-            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-white" style="transform: translateY(100%); transition: transform 0.3s;">
-              <button class="btn btn-primary w-100 rounded-0 text-uppercase add-to-cart" style="letter-spacing: 1px;">Add to Cart</button>
+      {% if featuredProducts is not empty %}
+        {% for produit in featuredProducts %}
+          <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+            <div class="product-item position-relative h-100">
+              <div class="position-relative mb-4 image-zoom-effect" style="height: 500px; overflow: hidden;">
+                <div class="image-holder">
+                  {% if produit.image %}
+                    <img src="{{ asset('images/' ~ produit.image) }}" alt="{{ produit.nomProduit }}" class="w-100 h-100" style="object-fit: cover;">
+                  {% else %}
+                    <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                      <span class="text-muted">Image produit</span>
+                    </div>
+                  {% endif %}
+                </div>
+                <button class="btn-wishlist btn btn-sm position-absolute top-0 end-0 m-2" type="button" aria-label="Add to wishlist" style="background: rgba(255,255,255,0.9); border: none; z-index: 2;">
+                  <svg width="20" height="20" fill="currentColor"><use href="#heart"></use></svg>
+                </button>
+                {% if produit.promotions|length > 0 %}
+                  {% for promo in produit.promotions %}
+                    {% if promo.dateExpiration >= date() %}
+                      <span class="position-absolute top-0 start-0 m-2 badge bg-danger" style="z-index: 2;">-{{ promo.reduction }}%</span>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+                <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-white" style="transform: translateY(100%); transition: transform 0.3s;">
+                  {% if app.user %}
+                    {% if produit.isEnStock() %}
+                      <form action="{{ path('app_panier_ajouter', {id: produit.id}) }}" method="post" class="add-to-cart-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('ajouter_' ~ produit.id) }}">
+                        <input type="hidden" name="quantite" value="1">
+                        <button type="submit" class="btn btn-primary w-100 rounded-0 text-uppercase add-to-cart" style="letter-spacing: 1px;">Add to Cart</button>
+                      </form>
+                    {% else %}
+                      <button class="btn btn-secondary w-100 rounded-0 text-uppercase" disabled style="letter-spacing: 1px;">Rupture de stock</button>
+                    {% endif %}
+                  {% else %}
+                    <a href="{{ path('app_login') }}" class="btn btn-primary w-100 rounded-0 text-uppercase" style="letter-spacing: 1px;">Se connecter</a>
+                  {% endif %}
+                </div>
+              </div>
+              <h3 class="h4 mb-3">{{ produit.nomProduit|upper }}</h3>
+              <p class="text-muted mb-3">
+                {% set prixFinal = produit.prixAsFloat %}
+                {% if produit.promotions|length > 0 %}
+                  {% for promo in produit.promotions %}
+                    {% if promo.dateExpiration >= date() %}
+                      {% set prixFinal = promo.appliquerPromo(produit.prixAsFloat) %}
+                      <span class="text-decoration-line-through text-muted me-2">{{ produit.prixAsFloat|number_format(2, ',', ' ') }} €</span>
+                      <strong class="text-danger">{{ prixFinal|number_format(2, ',', ' ') }} €</strong>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  <strong class="text-dark">{{ produit.prixAsFloat|number_format(2, ',', ' ') }} €</strong>
+                {% endif %}
+              </p>
+              <p class="text-muted mb-4 small">
+                {% if produit.description %}
+                  {{ produit.description|slice(0, 100) }}{% if produit.description|length > 100 %}...{% endif %}
+                {% else %}
+                  {{ produit.afficherDetails() }}
+                {% endif %}
+              </p>
+              <a href="{{ path('app_produit_show', {id: produit.id}) }}" class="btn btn-outline-dark rounded-0 text-uppercase border-animation" style="letter-spacing: 1px;">DISCOVER NOW</a>
             </div>
           </div>
-          <h3 class="h4 mb-3">SOFT LEATHER JACKETS</h3>
-          <p class="text-muted mb-3">
-            <strong class="text-dark">$299.00</strong>
-          </p>
-          <p class="text-muted mb-4 small">
-            Scelerisque duis aliquam qui lorem ipsum dolor amet, consectetur adipiscing elit.
-          </p>
-          <a href="#" class="btn btn-outline-dark rounded-0 text-uppercase border-animation" style="letter-spacing: 1px;">DISCOVER NOW</a>
+        {% endfor %}
+      {% else %}
+        <div class="col-12 text-center">
+          <p class="text-muted">Aucun produit disponible pour le moment.</p>
         </div>
-      </div>
-
-      {# Product Card 2 #}
-      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
-        <div class="product-item position-relative h-100">
-          <div class="position-relative mb-4 image-zoom-effect" style="height: 500px; overflow: hidden;">
-            <div class="image-holder">
-              <img src="{{ asset('images/product-item-2.jpg') }}" alt="Soft Leather Jacket" class="w-100 h-100" style="object-fit: cover;">
-            </div>
-            <button class="btn-wishlist btn btn-sm" type="button" aria-label="Add to wishlist">
-              <svg width="20" height="20" fill="currentColor"><use href="#heart"></use></svg>
-            </button>
-            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-white" style="transform: translateY(100%); transition: transform 0.3s;">
-              <button class="btn btn-primary w-100 rounded-0 text-uppercase add-to-cart" style="letter-spacing: 1px;">Add to Cart</button>
-            </div>
-          </div>
-          <h3 class="h4 mb-3">SOFT LEATHER JACKETS</h3>
-          <p class="text-muted mb-3">
-            <strong class="text-dark">$349.00</strong>
-          </p>
-          <p class="text-muted mb-4 small">
-            Scelerisque duis aliquam qui lorem ipsum dolor amet, consectetur adipiscing elit.
-          </p>
-          <a href="#" class="btn btn-outline-dark rounded-0 text-uppercase border-animation" style="letter-spacing: 1px;">DISCOVER NOW</a>
-        </div>
-      </div>
-
-      {# Product Card 3 #}
-      <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
-        <div class="product-item position-relative h-100">
-          <div class="position-relative mb-4 image-zoom-effect" style="height: 500px; overflow: hidden;">
-            <div class="image-holder">
-              <img src="{{ asset('images/product-item-3.jpg') }}" alt="Soft Leather Jacket" class="w-100 h-100" style="object-fit: cover;">
-            </div>
-            <button class="btn-wishlist btn btn-sm" type="button" aria-label="Add to wishlist">
-              <svg width="20" height="20" fill="currentColor"><use href="#heart"></use></svg>
-            </button>
-            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-white" style="transform: translateY(100%); transition: transform 0.3s;">
-              <button class="btn btn-primary w-100 rounded-0 text-uppercase add-to-cart" style="letter-spacing: 1px;">Add to Cart</button>
-            </div>
-          </div>
-          <h3 class="h4 mb-3">SOFT LEATHER JACKETS</h3>
-          <p class="text-muted mb-3">
-            <strong class="text-dark">$279.00</strong>
-          </p>
-          <p class="text-muted mb-4 small">
-            Scelerisque duis aliquam qui lorem ipsum dolor amet, consectetur adipiscing elit.
-          </p>
-          <a href="#" class="btn btn-outline-dark rounded-0 text-uppercase border-animation" style="letter-spacing: 1px;">DISCOVER NOW</a>
-        </div>
-      </div>
+      {% endif %}
     </div>
   </div>
 </section>
@@ -153,7 +150,7 @@
           </div>
           <div class="position-absolute bottom-0 start-0 end-0 p-4 text-white text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
             <h3 class="h4 mb-2">Women's Fashion</h3>
-            <a href="#" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
+            <a href="{{ path('app_produits_vetements') }}" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
           </div>
         </div>
       </div>
@@ -164,7 +161,7 @@
           </div>
           <div class="position-absolute bottom-0 start-0 end-0 p-4 text-white text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
             <h3 class="h4 mb-2">Men's Fashion</h3>
-            <a href="#" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
+            <a href="{{ path('app_produits_vetements') }}" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
           </div>
         </div>
       </div>
@@ -175,7 +172,7 @@
           </div>
           <div class="position-absolute bottom-0 start-0 end-0 p-4 text-white text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
             <h3 class="h4 mb-2">Accessories</h3>
-            <a href="#" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
+            <a href="{{ path('app_produits_accessoires') }}" class="btn btn-outline-light btn-sm rounded-0">Shop Now</a>
           </div>
         </div>
       </div>
@@ -248,6 +245,79 @@
           t++;
         });
         element.innerHTML = html;
+      });
+
+      // Handle Add to Cart forms with AJAX
+      const addToCartForms = document.querySelectorAll('.add-to-cart-form');
+      addToCartForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const formData = new FormData(form);
+          const button = form.querySelector('button[type="submit"]');
+          const originalText = button.textContent;
+          
+          // Disable button and show loading state
+          button.disabled = true;
+          button.textContent = 'Ajout...';
+          
+          fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+          })
+          .then(response => {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              return response.json();
+            } else {
+              // If not JSON, it's a redirect - follow it
+              window.location.href = response.url || form.action;
+              return null;
+            }
+          })
+          .then(data => {
+            if (data) {
+              if (data.success) {
+                button.textContent = 'Ajouté !';
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-success');
+                
+                // Show success message
+                if (data.message) {
+                  // You can add a toast notification here
+                  console.log(data.message);
+                }
+                
+                // Update cart count if element exists
+                const cartCountBadge = document.querySelector('.cart-count + .badge');
+                if (cartCountBadge) {
+                  const currentCount = parseInt(cartCountBadge.textContent) || 0;
+                  cartCountBadge.textContent = currentCount + 1;
+                }
+                
+                setTimeout(() => {
+                  button.textContent = originalText;
+                  button.classList.remove('btn-success');
+                  button.classList.add('btn-primary');
+                  button.disabled = false;
+                }, 2000);
+              } else {
+                alert(data.message || 'Une erreur est survenue');
+                button.textContent = originalText;
+                button.disabled = false;
+              }
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            // Fallback to normal form submission
+            form.submit();
+          });
+        });
       });
     });
   </script>

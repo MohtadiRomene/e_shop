@@ -1,0 +1,80 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Contact - Kaira Fashion Store{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 80px;">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <!-- Page Header -->
+        <div class="text-center mb-5" data-aos="fade-up">
+          <h1 class="h1 mb-3" style="font-family: 'Marcellus', serif; font-size: 3rem;">Contactez-nous</h1>
+          <p class="text-muted lead">Nous sommes là pour vous aider. N'hésitez pas à nous contacter !</p>
+        </div>
+
+        <div class="row g-5">
+          <!-- Contact Information -->
+          <div class="col-lg-4" data-aos="fade-up" data-aos-delay="100">
+            <div class="mb-4">
+              <h4 class="h5 mb-3" style="font-family: 'Marcellus', serif;">Informations de Contact</h4>
+              <div class="mb-3">
+                <p class="mb-1"><strong>Email</strong></p>
+                <p class="text-muted">contact@kaira.com</p>
+              </div>
+              <div class="mb-3">
+                <p class="mb-1"><strong>Téléphone</strong></p>
+                <p class="text-muted">+33 1 23 45 67 89</p>
+              </div>
+              <div class="mb-3">
+                <p class="mb-1"><strong>Adresse</strong></p>
+                <p class="text-muted">
+                  123 Rue de la Mode<br>
+                  75001 Paris, France
+                </p>
+              </div>
+              <div class="mb-3">
+                <p class="mb-1"><strong>Horaires</strong></p>
+                <p class="text-muted">
+                  Lundi - Vendredi : 9h - 18h<br>
+                  Samedi : 10h - 17h<br>
+                  Dimanche : Fermé
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Form -->
+          <div class="col-lg-8" data-aos="fade-up" data-aos-delay="200">
+            <form method="post" action="{{ path('app_contact') }}" class="contact-form">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="nom" class="form-label">Nom *</label>
+                  <input type="text" class="form-control rounded-0" id="nom" name="nom" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="email" class="form-label">Email *</label>
+                  <input type="email" class="form-control rounded-0" id="email" name="email" required>
+                </div>
+                <div class="col-12">
+                  <label for="sujet" class="form-label">Sujet</label>
+                  <input type="text" class="form-control rounded-0" id="sujet" name="sujet" placeholder="Sujet de votre message (optionnel)">
+                </div>
+                <div class="col-12">
+                  <label for="message" class="form-label">Message *</label>
+                  <textarea class="form-control rounded-0" id="message" name="message" rows="6" required placeholder="Votre message..."></textarea>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary rounded-0 text-uppercase px-5 py-3" style="letter-spacing: 1px;">
+                    Envoyer le message
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

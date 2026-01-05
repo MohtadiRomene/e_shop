@@ -29,16 +29,16 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                    {% for commandeProduit in commande.commandeProduits %}
+                                {% for commandeProduit in commande.commandeProduits %}
                                         {% set prixUnitaire = commandeProduit.prixUnitaireAsFloat %}
                                         {% set totalLigne = commandeProduit.total %}
-                                        <tr>
-                                            <td><strong>{{ commandeProduit.produit.nomProduit }}</strong></td>
-                                            <td>{{ commandeProduit.quantite }}</td>
+                                    <tr>
+                                        <td><strong>{{ commandeProduit.produit.nomProduit }}</strong></td>
+                                        <td>{{ commandeProduit.quantite }}</td>
                                             <td>{{ prixUnitaire|number_format(2, ',', ' ') }} €</td>
                                             <td><strong>{{ totalLigne|number_format(2, ',', ' ') }} €</strong></td>
-                                        </tr>
-                                    {% endfor %}
+                                    </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>

@@ -389,6 +389,70 @@
       });
     });
 
+    // ============================================
+    // 15. BOOTSTRAP DROPDOWN INITIALIZATION (Turbo compatible)
+    // ============================================
+    function initializeDropdowns() {
+      // Réinitialiser tous les dropdowns Bootstrap
+      const dropdownElements = document.querySelectorAll('.dropdown-toggle');
+      dropdownElements.forEach(element => {
+        // Vérifier si Bootstrap est disponible
+        if (typeof bootstrap !== 'undefined') {
+          // Créer une nouvelle instance de Dropdown si elle n'existe pas
+          const dropdown = bootstrap.Dropdown.getOrCreateInstance(element, {
+            boundary: 'viewport',
+            popperConfig: {
+              placement: 'bottom-end'
+            }
+          });
+          
+          // S'assurer que le dropdown est fonctionnel
+          element.addEventListener('click', function(e) {
+            e.preventDefault();
+            dropdown.toggle();
+          });
+        }
+      });
+    }
+
+    // Initialiser les dropdowns au chargement initial
+    initializeDropdowns();
+
+    // Réinitialiser les dropdowns après chaque chargement Turbo
+    if (typeof Turbo !== 'undefined') {
+      document.addEventListener('turbo:load', function() {
+        initializeDropdowns();
+      });
+      
+      document.addEventListener('turbo:render', function() {
+        initializeDropdowns();
+      });
+    }
+
+    // Fallback pour les navigateurs sans Turbo
+    // Réinitialiser les dropdowns si le DOM change
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length > 0) {
+          // Vérifier si un nouveau dropdown a été ajouté
+          const newDropdowns = document.querySelectorAll('.dropdown-toggle:not([data-bs-dropdown-initialized])');
+          if (newDropdowns.length > 0) {
+            initializeDropdowns();
+            // Marquer comme initialisé
+            newDropdowns.forEach(el => el.setAttribute('data-bs-dropdown-initialized', 'true'));
+          }
+        }
+      });
+    });
+
+    // Observer les changements dans le body
+    if (document.body) {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
+
     console.log('Kaira Interactive Features Loaded!');
   });
 

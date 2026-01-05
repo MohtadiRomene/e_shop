@@ -30,3 +30,7 @@ services:
         arguments:
             $fromEmail: '%app.mailer_from_email%'
             $fromName: '%app.mailer_from_name%'
+    
+    App\Service\FileMailerService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'

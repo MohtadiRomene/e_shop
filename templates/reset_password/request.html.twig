@@ -1,0 +1,95 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mot de passe oublié - Kaira{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 100px; min-height: calc(100vh - 200px); background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-7">
+                <div class="card rounded-0 border-0 shadow-sm" style="border-top: 3px solid #8C907E !important;">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <h1 class="h2 mb-2" style="font-family: var(--heading-font, 'Marcellus', serif);">Mot de passe oublié</h1>
+                            <p class="text-muted">Entrez votre adresse email pour recevoir un lien de réinitialisation</p>
+                        </div>
+
+                        {% for message in app.flashes('success') %}
+                            <div class="alert alert-success rounded-0 mb-4">
+                                <strong>✓ Email envoyé !</strong><br>
+                                {{ message }}
+                                <br><br>
+                                <div class="bg-white p-3 rounded border" style="border-color: #8C907E !important;">
+                                    <strong class="d-block mb-2">📧 Email envoyé !</strong>
+                                    <p class="mb-2 small">Un email contenant le lien de réinitialisation a été envoyé à votre adresse email.</p>
+                                    <p class="mb-0 small"><strong>Vérifiez votre boîte de réception et vos spams.</strong></p>
+                                </div>
+                                <br>
+                                <small class="text-muted">Le lien est valide pendant 1 heure.</small>
+                            </div>
+                        {% endfor %}
+                        
+                        {% for message in app.flashes('error') %}
+                            <div class="alert alert-danger rounded-0 mb-4">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                        
+                        {% if app.flashes('success')|length == 0 %}
+
+                            <form method="post" action="{{ path('app_forgot_password') }}" class="needs-validation" novalidate data-turbo="false">
+                                <div class="mb-4">
+                                    <label for="email" class="form-label fw-semibold">Email</label>
+                                    <input 
+                                        type="email" 
+                                        name="email" 
+                                        id="email" 
+                                        class="form-control rounded-0" 
+                                        autocomplete="email" 
+                                        required 
+                                        autofocus
+                                        placeholder="votre.email@example.com"
+                                        value="{{ app.request.get('email') }}"
+                                    >
+                                    <div class="invalid-feedback">
+                                        Veuillez entrer une adresse email valide.
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary w-100 rounded-0 text-uppercase py-3 mb-3" type="submit" style="letter-spacing: 1px; font-weight: 500;">
+                                    Envoyer le lien de réinitialisation
+                                </button>
+                            </form>
+
+                            <script>
+                            // Validation du formulaire
+                            (function() {
+                                'use strict';
+                                const form = document.querySelector('form.needs-validation');
+                                if (form) {
+                                    form.addEventListener('submit', function(event) {
+                                        if (!form.checkValidity()) {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                        }
+                                        form.classList.add('was-validated');
+                                    }, false);
+                                }
+                            })();
+                            </script>
+
+                            <div class="text-center">
+                                <p class="text-muted mb-0">
+                                    <a href="{{ path('app_login') }}" class="text-decoration-none fw-semibold" style="color: #8C907E;">
+                                        ← Retour à la connexion
+                                    </a>
+                                </p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

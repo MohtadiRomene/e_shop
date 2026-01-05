@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ article.title }} - Blog Kaira{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 80px;">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <!-- Article Header -->
+        <div class="mb-4" data-aos="fade-up">
+          <div class="d-flex align-items-center mb-3 small text-muted">
+            <span class="badge bg-light text-dark me-2">{{ article.category }}</span>
+            <span>{{ article.date|date('d M Y') }}</span>
+            <span class="mx-2">•</span>
+            <span>{{ article.author }}</span>
+          </div>
+          <h1 class="h1 mb-4" style="font-family: 'Marcellus', serif; font-size: 3rem;">{{ article.title }}</h1>
+        </div>
+
+        <!-- Article Image -->
+        <div class="mb-5" data-aos="fade-up" data-aos-delay="100">
+          <img src="{{ asset('images/' ~ article.image) }}" alt="{{ article.title }}" class="w-100" style="height: 500px; object-fit: cover;">
+        </div>
+
+        <!-- Article Content -->
+        <div class="article-content" data-aos="fade-up" data-aos-delay="200" style="font-size: 1.1rem; line-height: 1.8; color: #333;">
+          {{ article.content|raw }}
+        </div>
+
+        <!-- Back to Blog -->
+        <div class="mt-5 pt-4 border-top" data-aos="fade-up">
+          <a href="{{ path('app_blog') }}" class="btn btn-outline-dark rounded-0 text-uppercase" style="letter-spacing: 1px;">
+            ← Retour au blog
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

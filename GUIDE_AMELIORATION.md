@@ -223,3 +223,4 @@ Ce guide détaille toutes les améliorations à apporter pour rendre votre proje
 - [Documentation Symfony](https://symfony.com/doc/current/index.html)
 - [Best Practices Symfony](https://symfony.com/doc/current/best_practices.html)
 - [Doctrine Best Practices](https://www.doctrine-project.org/projects/doctrine-orm/en/latest/reference/best-practices.html)
+

@@ -43,8 +43,13 @@
                                 >
                             </div>
 
-                            <div class="mb-4">
-                                <label for="inputPassword" class="form-label fw-semibold">Mot de passe</label>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label for="inputPassword" class="form-label fw-semibold mb-0">Mot de passe</label>
+                                    <a href="{{ path('app_forgot_password') }}" class="text-decoration-none small" style="color: #8C907E;">
+                                        Mot de passe oublié ?
+                                    </a>
+                                </div>
                                 <input 
                                     type="password" 
                                     name="password" 

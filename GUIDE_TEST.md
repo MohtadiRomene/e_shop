@@ -165,3 +165,4 @@
 - Les erreurs sont affichées clairement dans l'interface
 
 **Le site est prêt pour les tests ! 🎉**
+

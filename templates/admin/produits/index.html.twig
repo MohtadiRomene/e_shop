@@ -17,22 +17,40 @@
         <table class="table">
             <thead>
                 <tr>
+                    <th>Image</th>
                     <th>ID</th>
                     <th>Nom</th>
                     <th>Type</th>
                     <th>Prix</th>
+                    <th>Stock</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for produit in produits %}
                     <tr>
+                        <td>
+                            {% if produit.image %}
+                                <img src="{{ asset('images/' ~ produit.image) }}" alt="{{ produit.nomProduit }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 4px;">
+                                    <small class="text-muted">N/A</small>
+                                </div>
+                            {% endif %}
+                        </td>
                         <td>{{ produit.id }}</td>
                         <td><strong>{{ produit.nomProduit }}</strong></td>
                         <td>
                             <span class="badge bg-secondary">{{ produit.type }}</span>
                         </td>
-                        <td>{{ produit.prix|number_format(2, ',', ' ') }} €</td>
+                        <td>{{ produit.prixAsFloat|number_format(2, ',', ' ') }} €</td>
+                        <td>
+                            {% if produit.isEnStock() %}
+                                <span class="badge bg-success">{{ produit.stock }} en stock</span>
+                            {% else %}
+                                <span class="badge bg-danger">Rupture</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <a href="{{ path('app_admin_produits_modifier', {id: produit.id}) }}" class="btn btn-sm btn-outline-primary">Modifier</a>
                             <form method="post" action="{{ path('app_admin_produits_supprimer', {id: produit.id}) }}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">

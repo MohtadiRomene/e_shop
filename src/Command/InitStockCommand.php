@@ -61,3 +61,4 @@ class InitStockCommand extends Command
         return Command::SUCCESS;
     }
 }
+

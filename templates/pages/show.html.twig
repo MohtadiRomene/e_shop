@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page.title }} - Kaira Fashion Store{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 80px;">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <!-- Page Header -->
+        <div class="mb-5" data-aos="fade-up">
+          <h1 class="h1 mb-4" style="font-family: 'Marcellus', serif; font-size: 3rem;">{{ page.title }}</h1>
+        </div>
+
+        <!-- Page Content -->
+        <div class="page-content" data-aos="fade-up" data-aos-delay="100" style="font-size: 1.1rem; line-height: 1.8; color: #333;">
+          {{ page.content|raw }}
+        </div>
+
+        <!-- Back to Pages -->
+        <div class="mt-5 pt-4 border-top" data-aos="fade-up">
+          <a href="{{ path('app_pages') }}" class="btn btn-outline-dark rounded-0 text-uppercase" style="letter-spacing: 1px;">
+            ← Retour aux pages
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

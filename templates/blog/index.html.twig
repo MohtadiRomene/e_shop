@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Blog - Kaira Fashion Store{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 80px;">
+  <div class="container">
+    <!-- Page Header -->
+    <div class="text-center mb-5" data-aos="fade-up">
+      <h1 class="h1 mb-3" style="font-family: 'Marcellus', serif; font-size: 3rem;">Notre Blog</h1>
+      <p class="text-muted lead">Découvrez les dernières tendances, conseils et actualités mode</p>
+    </div>
+
+    <!-- Blog Articles Grid -->
+    <div class="row g-4">
+      {% for article in articles %}
+        <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+          <article class="card border-0 h-100 shadow-sm" style="transition: transform 0.3s ease;">
+            <a href="{{ path('app_blog_show', {id: article.id}) }}" class="text-decoration-none text-dark">
+              <div class="position-relative overflow-hidden" style="height: 300px;">
+                <img src="{{ asset('images/' ~ article.image) }}" alt="{{ article.title }}" class="w-100 h-100" style="object-fit: cover; transition: transform 0.5s ease;">
+                <div class="position-absolute top-0 start-0 m-3">
+                  <span class="badge bg-white text-dark">{{ article.category }}</span>
+                </div>
+              </div>
+              <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-2 small text-muted">
+                  <span>{{ article.date|date('d M Y') }}</span>
+                  <span class="mx-2">•</span>
+                  <span>{{ article.author }}</span>
+                </div>
+                <h3 class="h5 mb-3" style="font-family: 'Marcellus', serif;">{{ article.title }}</h3>
+                <p class="text-muted mb-3">{{ article.excerpt }}</p>
+                <span class="text-uppercase small fw-bold" style="letter-spacing: 1px; color: #8C907E;">Lire la suite →</span>
+              </div>
+            </a>
+          </article>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<style>
+  .card:hover {
+    transform: translateY(-5px);
+  }
+  .card:hover img {
+    transform: scale(1.1);
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Pages - Kaira Fashion Store{% endblock %}
+
+{% block body %}
+<section class="py-5" style="margin-top: 80px;">
+  <div class="container">
+    <!-- Page Header -->
+    <div class="text-center mb-5" data-aos="fade-up">
+      <h1 class="h1 mb-3" style="font-family: 'Marcellus', serif; font-size: 3rem;">Pages</h1>
+      <p class="text-muted lead">Informations importantes sur nos services et politiques</p>
+    </div>
+
+    <!-- Pages Grid -->
+    <div class="row g-4">
+      {% for page in pages %}
+        <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+          <div class="card border-0 shadow-sm h-100" style="transition: transform 0.3s ease; cursor: pointer;" onclick="window.location.href='{{ path('app_pages_show', {slug: page.slug}) }}'">
+            <div class="card-body p-4">
+              <h3 class="h5 mb-3" style="font-family: 'Marcellus', serif;">{{ page.title }}</h3>
+              <p class="text-muted mb-3">{{ page.description }}</p>
+              <a href="{{ path('app_pages_show', {slug: page.slug}) }}" class="text-uppercase small fw-bold text-decoration-none" style="letter-spacing: 1px; color: #8C907E;">
+                En savoir plus →
+              </a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<style>
+  .card:hover {
+    transform: translateY(-5px);
+  }
+</style>
+{% endblock %}

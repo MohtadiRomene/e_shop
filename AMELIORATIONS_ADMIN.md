@@ -162,3 +162,4 @@ Le dashboard admin est maintenant **professionnel et entièrement fonctionnel** 
 - ✅ Sécurité renforcée
 
 **Vous pouvez maintenant gérer votre site e-commerce en toute simplicité !** 🚀
+

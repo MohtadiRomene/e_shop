@@ -71,6 +71,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private bool $isActive = true;
 
     /**
+     * Token pour la réinitialisation du mot de passe
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $resetToken = null;
+
+    /**
+     * Date d'expiration du token de réinitialisation
+     */
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTime $resetTokenExpiresAt = null;
+
+    /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
@@ -316,5 +328,39 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isAdmin(): bool
     {
         return in_array('ROLE_ADMIN', $this->getRoles(), true);
+    }
+
+    public function getResetToken(): ?string
+    {
+        return $this->resetToken;
+    }
+
+    public function setResetToken(?string $resetToken): static
+    {
+        $this->resetToken = $resetToken;
+        return $this;
+    }
+
+    public function getResetTokenExpiresAt(): ?\DateTime
+    {
+        return $this->resetTokenExpiresAt;
+    }
+
+    public function setResetTokenExpiresAt(?\DateTime $resetTokenExpiresAt): static
+    {
+        $this->resetTokenExpiresAt = $resetTokenExpiresAt;
+        return $this;
+    }
+
+    /**
+     * Vérifier si le token de réinitialisation est valide
+     */
+    public function isResetTokenValid(): bool
+    {
+        if (!$this->resetToken || !$this->resetTokenExpiresAt) {
+            return false;
+        }
+
+        return $this->resetTokenExpiresAt > new \DateTime();
     }
 }
