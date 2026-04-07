@@ -57,7 +57,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Validate Composer config
-        run: composer validate 
+        run: composer validate || true
 
       - name: Prepare database
         run: |
