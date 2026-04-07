@@ -1,0 +1,80 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: e_shop/app:latest
+    restart: unless-stopped
+    env_file:
+      - path: .env.container
+        required: false
+    environment:
+      APP_ENV: ${CONTAINER_APP_ENV:-prod}
+      APP_DEBUG: ${CONTAINER_APP_DEBUG:-0}
+      APP_SECRET: ${APP_SECRET}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-app}
+      DB_PASSWORD: ${DB_PASSWORD:-app}
+      DB_NAME: ${DB_NAME:-e_shop}
+      DATABASE_URL: mysql://${DB_USER:-app}:${DB_PASSWORD:-app}@${DB_HOST:-db}:${DB_PORT:-3306}/${DB_NAME:-e_shop}?serverVersion=8.0.32&charset=utf8mb4
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,REMOTE_ADDR}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^localhost$}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-0}
+      APP_VERSION: ${APP_VERSION:-local}
+    networks:
+      - e_shop_net
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    image: e_shop/web:latest
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    env_file:
+      - path: .env.container
+        required: false
+    networks:
+      - e_shop_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    profiles:
+      - local
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-e_shop}
+      MYSQL_USER: ${DB_USER:-app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-app}
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u${DB_USER:-app} -p${DB_PASSWORD:-app} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - e_shop_net
+
+networks:
+  e_shop_net:
+
+volumes:
+  db_data:

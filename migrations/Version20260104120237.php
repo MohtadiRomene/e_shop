@@ -45,11 +45,11 @@ final class Version20260104120237 extends AbstractMigration
         }
         if (!$columnExists('user', 'created_at')) {
             $this->addSql('ALTER TABLE `user` ADD created_at DATETIME DEFAULT NULL');
-            $this->addSql('UPDATE `user` SET created_at = NOW() WHERE created_at IS NULL OR created_at = \'0000-00-00 00:00:00\'');
+            $this->addSql('UPDATE `user` SET created_at = NOW() WHERE created_at IS NULL');
             $this->addSql('ALTER TABLE `user` MODIFY created_at DATETIME NOT NULL');
         } else {
             // Corriger les valeurs invalides existantes
-            $this->addSql('UPDATE `user` SET created_at = NOW() WHERE created_at IS NULL OR created_at = \'0000-00-00 00:00:00\'');
+            $this->addSql('UPDATE `user` SET created_at = NOW() WHERE created_at IS NULL');
         }
         if (!$columnExists('user', 'updated_at')) {
             $this->addSql('ALTER TABLE `user` ADD updated_at DATETIME DEFAULT NULL');
@@ -67,11 +67,11 @@ final class Version20260104120237 extends AbstractMigration
         }
         if (!$columnExists('produit', 'created_at')) {
             $this->addSql('ALTER TABLE produit ADD created_at DATETIME DEFAULT NULL');
-            $this->addSql('UPDATE produit SET created_at = NOW() WHERE created_at IS NULL OR created_at = \'0000-00-00 00:00:00\'');
+            $this->addSql('UPDATE produit SET created_at = NOW() WHERE created_at IS NULL');
             $this->addSql('ALTER TABLE produit MODIFY created_at DATETIME NOT NULL');
         } else {
             // Corriger les valeurs invalides existantes
-            $this->addSql('UPDATE produit SET created_at = NOW() WHERE created_at IS NULL OR created_at = \'0000-00-00 00:00:00\'');
+            $this->addSql('UPDATE produit SET created_at = NOW() WHERE created_at IS NULL');
         }
         if (!$columnExists('produit', 'updated_at')) {
             $this->addSql('ALTER TABLE produit ADD updated_at DATETIME DEFAULT NULL');
@@ -86,11 +86,11 @@ final class Version20260104120237 extends AbstractMigration
         }
         if (!$columnExists('commande', 'created_at')) {
             $this->addSql('ALTER TABLE commande ADD created_at DATETIME DEFAULT NULL');
-            $this->addSql('UPDATE commande SET created_at = COALESCE(Datecommande, NOW()) WHERE created_at IS NULL OR created_at = \'0000-00-00 00:00:00\'');
+            $this->addSql('UPDATE commande SET created_at = IFNULL(Datecommande, NOW()) WHERE created_at IS NULL');
             $this->addSql('ALTER TABLE commande MODIFY created_at DATETIME NOT NULL');
         } else {
             // Corriger les valeurs invalides existantes
-            $this->addSql('UPDATE commande SET created_at = COALESCE(Datecommande, NOW()) WHERE created_at IS NULL OR created_at = \'0000-00-00 00:00:00\'');
+            $this->addSql('UPDATE commande SET created_at = IFNULL(Datecommande, NOW()) WHERE created_at IS NULL');
         }
         if (!$columnExists('commande', 'updated_at')) {
             $this->addSql('ALTER TABLE commande ADD updated_at DATETIME DEFAULT NULL');

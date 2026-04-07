@@ -1,0 +1,13 @@
+.git
+.github
+.idea
+.vscode
+var
+vendor
+node_modules
+tests
+*.log
+*.md
+compose*.yaml
+compose*.yml
+env*.example

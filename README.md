@@ -124,6 +124,87 @@ Pour la production, utilisez SendGrid, Mailgun, ou un autre service professionne
 2. Exécutez `composer install --no-dev --optimize-autoloader`
 3. Exécutez les migrations : `php bin/console doctrine:migrations:migrate`
 4. Configurez votre serveur web (Apache/Nginx) pour pointer vers `/public`
+5. Utilisez `env.prod.example` comme base de variables cloud
+6. Suivez `OPS_CLOUD_CHECKLIST.md` avant le go-live
+
+## 🔧 DevOps / CI
+
+- Pipeline CI GitHub Actions: `.github/workflows/ci.yml`
+- Variables d'environnement de reference:
+  - `env.example` (developpement)
+  - `env.prod.example` (production/cloud)
+
+## 📦 Conteneurisation (Docker)
+
+Fichiers ajoutes:
+- `Dockerfile`
+- `compose.container.yaml`
+- `.dockerignore`
+- `env.container.example`
+- `docker/nginx/default.conf`
+- `docker/nginx/Dockerfile`
+- `docker/php/entrypoint.sh`
+
+### Lancer en local avec Docker
+
+1. Copier les variables:
+   ```bash
+   cp env.container.example .env.container
+   ```
+   PowerShell:
+   ```powershell
+   Copy-Item env.container.example .env.container
+   ```
+2. Adapter les secrets dans `.env.container`.
+3. Construire et lancer:
+   ```bash
+   docker compose --env-file .env.container -f compose.container.yaml up -d --build
+   ```
+4. Ouvrir l'application:
+   - http://localhost:8080
+
+### Commandes utiles
+
+- Voir les logs:
+  ```bash
+  docker compose --env-file .env.container -f compose.container.yaml logs -f
+  ```
+- Arreter:
+  ```bash
+  docker compose --env-file .env.container -f compose.container.yaml down
+  ```
+
+### Mode AWS (ECS/Fargate ou EC2)
+
+La stack Docker est prete pour le cloud:
+- pas de bind mount obligatoire
+- image `app` (PHP-FPM) + image `web` (Nginx)
+- service `db` optionnel (profil `local` uniquement)
+
+Pour AWS, utilisez de preference RDS PostgreSQL et des secrets
+AWS Secrets Manager/SSM.
+
+1. Dans `.env.container`, desactiver la base locale:
+   ```env
+   COMPOSE_PROFILES=
+   DATABASE_URL=postgresql://app:strong-password@your-rds-endpoint:5432/e_shop?serverVersion=16&charset=utf8
+   TRUSTED_HOSTS='^votre-domaine\\.com$'
+   TRUSTED_PROXIES=REMOTE_ADDR
+   RUN_MIGRATIONS=0
+   ```
+2. Builder les images:
+   ```bash
+   docker compose --env-file .env.container -f compose.container.yaml build
+   ```
+3. Pousser les images vers ECR.
+4. Deployer sur ECS (2 conteneurs dans la meme task: `web` et `app`).
+5. Exposer `web:80` derriere un ALB (HTTPS termine sur ALB).
+
+Note:
+- `RUN_MIGRATIONS=0` est recommande par defaut en production.
+- Lancez les migrations via un job one-shot (CI/CD ou ECS RunTask).
+- Si vous activez `RUN_MIGRATIONS=1`, vous pouvez definir
+  `MIGRATIONS_STRICT=1` pour faire echouer le conteneur en cas d'erreur.
 
 ## 📄 Licence
 

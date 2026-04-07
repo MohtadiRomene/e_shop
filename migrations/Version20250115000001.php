@@ -21,6 +21,9 @@ final class Version20250115000001 extends AbstractMigration
     {
         $connection = $this->connection;
         $schemaManager = $connection->createSchemaManager();
+        if (!$schemaManager->tablesExist(['user'])) {
+            return;
+        }
         
         // Fonction helper pour vérifier si une colonne existe
         $columnExists = function($table, $column) use ($schemaManager) {
@@ -47,6 +50,11 @@ final class Version20250115000001 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        $schemaManager = $this->connection->createSchemaManager();
+        if (!$schemaManager->tablesExist(['user'])) {
+            return;
+        }
+
         // Retirer les colonnes de réinitialisation
         $this->addSql('ALTER TABLE `user` DROP COLUMN IF EXISTS reset_token');
         $this->addSql('ALTER TABLE `user` DROP COLUMN IF EXISTS reset_token_expires_at');
