@@ -1,0 +1,9 @@
+* text=auto
+
+# Shell scripts must keep LF (required in Alpine containers)
+*.sh text eol=lf
+
+# YAML / Docker files: keep LF to avoid tooling issues
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf

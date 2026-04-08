@@ -30,7 +30,7 @@ jobs:
       APP_ENV: test
       APP_DEBUG: 0
       APP_SECRET: test_secret_ci_only
-      DATABASE_URL: mysql://app:app@127.0.0.1:3306/app?serverVersion=8.0.32&charset=utf8mb4
+      DATABASE_URL: mysql://app:app@127.0.0.1:3306/app_test?serverVersion=8.0.32&charset=utf8mb4
       MAILER_DSN: null://null
 
     steps:
