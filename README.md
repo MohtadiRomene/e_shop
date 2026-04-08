@@ -147,6 +147,20 @@ Fichiers ajoutes:
 
 ### Lancer en local avec Docker
 
+#### Option la plus simple (recommandee)
+
+PowerShell (Windows):
+```powershell
+.\bin\docker-up.ps1 -Rebuild
+```
+
+Bash (Linux/macOS/WSL):
+```bash
+./bin/docker-up.sh
+```
+
+#### Mode manuel
+
 1. Copier les variables:
    ```bash
    cp env.container.example .env.container
@@ -155,7 +169,13 @@ Fichiers ajoutes:
    ```powershell
    Copy-Item env.container.example .env.container
    ```
-2. Adapter les secrets dans `.env.container`.
+2. Adapter les secrets dans `.env.container` (au minimum `APP_SECRET` et les mots de passe DB).
+   - Si vous modifiez `DB_USER` / `DB_PASSWORD` / `DB_NAME` apres un premier lancement,
+     il faut recreer le volume MySQL (sinon "Access denied"):
+     ```bash
+     docker compose --env-file .env.container -f compose.container.yaml down -v
+     docker compose --env-file .env.container -f compose.container.yaml up -d --build
+     ```
 3. Construire et lancer:
    ```bash
    docker compose --env-file .env.container -f compose.container.yaml up -d --build
