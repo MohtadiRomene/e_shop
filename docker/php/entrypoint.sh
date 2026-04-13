@@ -42,6 +42,12 @@ if [ "${RUN_MIGRATIONS:-0}" = "1" ]; then
   fi
 fi
 
+if [ "${ENSURE_DEFAULT_ADMIN:-0}" = "1" ]; then
+  php bin/console app:ensure-default-admin \
+    --no-interaction \
+    --env="${APP_ENV}" || true
+fi
+
 # Ensure runtime cache/log dirs remain writable by php-fpm worker user.
 chown -R www-data:www-data var
 

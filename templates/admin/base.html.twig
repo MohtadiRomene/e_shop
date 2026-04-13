@@ -47,6 +47,9 @@
                     <a class="admin-nav-link {{ 'app_admin_commandes' in app.request.get('_route') ? 'active' : '' }}" href="{{ path('app_admin_commandes') }}">
                         Commandes
                     </a>
+                    <a class="admin-nav-link {{ 'app_admin_users' in app.request.get('_route') ? 'active' : '' }}" href="{{ path('app_admin_users_nouveau_admin') }}">
+                        Nouvel admin
+                    </a>
                     <a class="admin-nav-link" href="{{ path('app_home') }}">
                         Retour au site
                     </a>

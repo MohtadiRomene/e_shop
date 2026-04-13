@@ -58,28 +58,28 @@
                 <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                         <span>Vêtements</span>
-                        <span>{{ vetements }} ({{ (vetements / totalProduits * 100)|number_format(1) }}%)</span>
+                        <span>{{ vetements }} ({{ (totalProduits > 0 ? (vetements / totalProduits * 100) : 0)|number_format(1) }}%)</span>
                     </div>
                     <div class="progress" style="height: 20px;">
-                        <div class="progress-bar" role="progressbar" style="width: {{ (vetements / totalProduits * 100)|number_format(1) }}%"></div>
+                        <div class="progress-bar" role="progressbar" style="width: {{ (totalProduits > 0 ? (vetements / totalProduits * 100) : 0)|number_format(1) }}%"></div>
                     </div>
                 </div>
                 <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                         <span>Chaussures</span>
-                        <span>{{ chaussures }} ({{ (chaussures / totalProduits * 100)|number_format(1) }}%)</span>
+                        <span>{{ chaussures }} ({{ (totalProduits > 0 ? (chaussures / totalProduits * 100) : 0)|number_format(1) }}%)</span>
                     </div>
                     <div class="progress" style="height: 20px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (chaussures / totalProduits * 100)|number_format(1) }}%"></div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (totalProduits > 0 ? (chaussures / totalProduits * 100) : 0)|number_format(1) }}%"></div>
                     </div>
                 </div>
                 <div class="mb-2">
                     <div class="d-flex justify-content-between mb-1">
                         <span>Accessoires</span>
-                        <span>{{ accessoires }} ({{ (accessoires / totalProduits * 100)|number_format(1) }}%)</span>
+                        <span>{{ accessoires }} ({{ (totalProduits > 0 ? (accessoires / totalProduits * 100) : 0)|number_format(1) }}%)</span>
                     </div>
                     <div class="progress" style="height: 20px;">
-                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ (accessoires / totalProduits * 100)|number_format(1) }}%"></div>
+                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ (totalProduits > 0 ? (accessoires / totalProduits * 100) : 0)|number_format(1) }}%"></div>
                     </div>
                 </div>
             </div>

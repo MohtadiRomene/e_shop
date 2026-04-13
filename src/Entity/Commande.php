@@ -31,11 +31,11 @@ class Commande
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, name: "Datecommande")]
+    #[ORM\Column(type: Types::DATE_MUTABLE, name: "datecommande")]
     #[Assert\NotNull(message: "La date de commande est obligatoire")]
     private ?\DateTime $datecommande = null;
 
-    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, name: "prixtotale")]
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, name: "prixtotal")]
     #[Assert\NotNull(message: "Le prix total est obligatoire")]
     #[Assert\PositiveOrZero(message: "Le prix total doit être positif ou zéro")]
     private ?string $prixtotal = null;
