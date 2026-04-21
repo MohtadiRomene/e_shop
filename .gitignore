@@ -34,3 +34,7 @@ Thumbs.db
 
 # Docker local env (contains secrets)
 .env.container
+
+# Local test and analysis artifacts
+/coverage/
+/.phpunit.cache/

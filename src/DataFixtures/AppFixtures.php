@@ -72,7 +72,7 @@ class AppFixtures extends Fixture
             $vetement->setGenre($vetementData['genre']);
             $vetement->setImage($vetementData['image']);
             // Définir le stock (entre 10 et 50 unités aléatoirement)
-            $stock = rand(10, 50);
+            $stock = random_int(10, 50);
             $vetement->setStock($stock);
             $vetement->setEnStock(true);
             $manager->persist($vetement);
@@ -94,7 +94,7 @@ class AppFixtures extends Fixture
             $chaussure->setPointure($chaussureData['pointure']);
             $chaussure->setImage($chaussureData['image']);
             // Définir le stock (entre 10 et 50 unités aléatoirement)
-            $stock = rand(10, 50);
+            $stock = random_int(10, 50);
             $chaussure->setStock($stock);
             $chaussure->setEnStock(true);
             $manager->persist($chaussure);
@@ -116,7 +116,7 @@ class AppFixtures extends Fixture
             $accessoire->setAccessoireType($accessoireData['type']);
             $accessoire->setImage($accessoireData['image']);
             // Définir le stock (entre 10 et 50 unités aléatoirement)
-            $stock = rand(10, 50);
+            $stock = random_int(10, 50);
             $accessoire->setStock($stock);
             $accessoire->setEnStock(true);
             $manager->persist($accessoire);

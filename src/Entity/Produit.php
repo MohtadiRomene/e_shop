@@ -156,14 +156,12 @@ class Produit
 
     public function getType(): string
     {
-        if ($this instanceof Vetement) {
-            return 'vetement';
-        } elseif ($this instanceof Chaussure) {
-            return 'chaussure';
-        } elseif ($this instanceof Accessoire) {
-            return 'accessoire';
-        }
-        return 'produit';
+        return match (true) {
+            $this instanceof Vetement => 'vetement',
+            $this instanceof Chaussure => 'chaussure',
+            $this instanceof Accessoire => 'accessoire',
+            default => 'produit',
+        };
     }
 
     public function getDescription(): ?string
