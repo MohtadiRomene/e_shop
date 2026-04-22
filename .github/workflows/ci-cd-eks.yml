@@ -96,7 +96,16 @@ jobs:
           helm upgrade --install external-secrets external-secrets/external-secrets \
             --namespace external-secrets \
             --create-namespace \
-            --set installCRDs=true
+            --set installCRDs=true \
+            --wait \
+            --timeout 10m
+
+      - name: Wait for External Secrets CRDs
+        run: |
+          kubectl wait --for=condition=Established --timeout=180s crd/externalsecrets.external-secrets.io
+          kubectl wait --for=condition=Established --timeout=180s crd/secretstores.external-secrets.io
+          kubectl wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io
+          kubectl -n external-secrets rollout status deploy/external-secrets --timeout=300s
 
       - name: Deploy to staging
         run: |
@@ -138,7 +147,16 @@ jobs:
           helm upgrade --install external-secrets external-secrets/external-secrets \
             --namespace external-secrets \
             --create-namespace \
-            --set installCRDs=true
+            --set installCRDs=true \
+            --wait \
+            --timeout 10m
+
+      - name: Wait for External Secrets CRDs
+        run: |
+          kubectl wait --for=condition=Established --timeout=180s crd/externalsecrets.external-secrets.io
+          kubectl wait --for=condition=Established --timeout=180s crd/secretstores.external-secrets.io
+          kubectl wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io
+          kubectl -n external-secrets rollout status deploy/external-secrets --timeout=300s
 
       - name: Deploy to production
         run: |
