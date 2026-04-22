@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: e-shop
+  namespace: {{ .Values.namespace }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: e-shop
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http

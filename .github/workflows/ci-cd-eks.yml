@@ -1,0 +1,132 @@
+name: ci-cd-eks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-1
+  EKS_CLUSTER_NAME: e-shop-prod
+  APP_REPOSITORY: e-shop/app
+  WEB_REPOSITORY: e-shop/web
+  HELM_RELEASE: e-shop
+  HELM_NAMESPACE: e-shop
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run tests
+        run: php bin/phpunit
+
+      - name: Configure AWS credentials
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        if: github.event_name != 'pull_request'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build app image
+        if: github.event_name != 'pull_request'
+        run: |
+          docker build -f Dockerfile -t ${{ steps.login-ecr.outputs.registry }}/${{ env.APP_REPOSITORY }}:sha-${{ github.sha }} .
+
+      - name: Build web image
+        if: github.event_name != 'pull_request'
+        run: |
+          docker build -f docker/nginx/Dockerfile -t ${{ steps.login-ecr.outputs.registry }}/${{ env.WEB_REPOSITORY }}:sha-${{ github.sha }} .
+
+      - name: Push images to ECR
+        if: github.event_name != 'pull_request'
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.APP_REPOSITORY }}:sha-${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.WEB_REPOSITORY }}:sha-${{ github.sha }}
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [test-and-build]
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+
+      - name: Deploy to staging
+        run: |
+          helm upgrade --install $HELM_RELEASE ./k8s/helm/e-shop \
+            --namespace $HELM_NAMESPACE \
+            --create-namespace \
+            --set image.app.tag=sha-${{ github.sha }} \
+            --set image.web.tag=sha-${{ github.sha }} \
+            --set ingress.host=staging.shop.example.com
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+
+      - name: Deploy to production
+        run: |
+          helm upgrade --install $HELM_RELEASE ./k8s/helm/e-shop \
+            --namespace $HELM_NAMESPACE \
+            --create-namespace \
+            --set image.app.tag=sha-${{ github.sha }} \
+            --set image.web.tag=sha-${{ github.sha }} \
+            --set ingress.host=shop.example.com

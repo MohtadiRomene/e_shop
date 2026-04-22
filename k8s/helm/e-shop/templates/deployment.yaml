@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e-shop
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: e-shop
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: e-shop
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: e-shop
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: app
+          image: "{{ .Values.image.app.repository }}:{{ .Values.image.app.tag }}"
+          imagePullPolicy: {{ .Values.image.app.pullPolicy }}
+          env:
+            - name: APP_ENV
+              value: {{ .Values.env.appEnv | quote }}
+            - name: APP_DEBUG
+              value: {{ .Values.env.appDebug | quote }}
+            - name: TRUSTED_PROXIES
+              value: {{ .Values.env.trustedProxies | quote }}
+            - name: TRUSTED_HOSTS
+              value: {{ .Values.env.trustedHosts | quote }}
+            - name: RUN_MIGRATIONS
+              value: {{ .Values.env.runMigrations | quote }}
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: app_secret
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: database_url
+          ports:
+            - containerPort: 9000
+              name: fpm
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          startupProbe:
+            tcpSocket:
+              port: 9000
+            failureThreshold: 30
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources.app | nindent 12 }}
+        - name: web
+          image: "{{ .Values.image.web.repository }}:{{ .Values.image.web.tag }}"
+          imagePullPolicy: {{ .Values.image.web.pullPolicy }}
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.resources.web | nindent 12 }}
