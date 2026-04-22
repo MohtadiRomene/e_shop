@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: eu-west-1
+  AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: e-shop-prod
   APP_REPOSITORY: e-shop/app
   WEB_REPOSITORY: e-shop/web
