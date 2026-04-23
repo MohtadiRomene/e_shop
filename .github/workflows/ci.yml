@@ -133,8 +133,26 @@ jobs:
             --log-junit coverage/junit.xml \
             --coverage-clover coverage/clover.xml
 
+      - name: Check SonarQube connectivity
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        run: |
+          set -euo pipefail
+          echo "Checking: ${SONAR_HOST_URL}/api/server/version"
+          for i in 1 2 3; do
+            if curl -fsS --max-time 10 "${SONAR_HOST_URL}/api/server/version" > /dev/null; then
+              echo "SonarQube reachable."
+              exit 0
+            fi
+            echo "Attempt ${i}/3 failed. Retrying in 5s..."
+            sleep 5
+          done
+          echo "SonarQube is not reachable from GitHub-hosted runner."
+          echo "Fix: expose SonarQube publicly (with auth) or use a self-hosted runner in the same VPC."
+          exit 1
+
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
