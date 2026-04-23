@@ -1,0 +1,48 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: e-shop-migrations
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: e-shop
+        app.kubernetes.io/component: migrations
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      restartPolicy: Never
+      containers:
+        - name: migrations
+          image: "{{ .Values.image.app.repository }}:{{ .Values.image.app.tag }}"
+          imagePullPolicy: {{ .Values.image.app.pullPolicy }}
+          env:
+            - name: APP_ENV
+              value: {{ .Values.env.appEnv | quote }}
+            - name: APP_DEBUG
+              value: {{ .Values.env.appDebug | quote }}
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: app_secret
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: database_url
+          command:
+            - sh
+            - -lc
+            - >
+              php bin/console doctrine:migrations:migrate
+              --no-interaction
+              --allow-no-migration
+              --env="${APP_ENV}"
+{{- end }}

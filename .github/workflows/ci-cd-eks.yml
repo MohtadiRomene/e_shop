@@ -20,8 +20,12 @@ permissions:
   contents: read
 
 jobs:
-  test-and-build:
+  build:
+    name: Build & Push (ECR)
     runs-on: ubuntu-latest
+    outputs:
+      app_image: ${{ steps.meta.outputs.app_image }}
+      web_image: ${{ steps.meta.outputs.web_image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,99 +41,94 @@ jobs:
       - name: Run tests
         run: php bin/phpunit
 
-      - name: Configure AWS credentials
-        if: github.event_name != 'pull_request'
+      - name: Configure AWS credentials (OIDC)
+        if: github.event_name != 'pull_request' && secrets.AWS_GITHUB_ROLE_ARN != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS credentials (Access keys)
+        if: github.event_name != 'pull_request' && secrets.AWS_GITHUB_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || env.AWS_REGION }}
 
       - name: Login to ECR
         if: github.event_name != 'pull_request'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build app image
+      - name: Build & tag images
         if: github.event_name != 'pull_request'
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SHA_TAG: sha-${{ github.sha }}
         run: |
-          docker build -f Dockerfile -t ${{ steps.login-ecr.outputs.registry }}/${{ env.APP_REPOSITORY }}:sha-${{ github.sha }} .
+          set -euo pipefail
 
-      - name: Build web image
-        if: github.event_name != 'pull_request'
-        run: |
-          docker build -f docker/nginx/Dockerfile -t ${{ steps.login-ecr.outputs.registry }}/${{ env.WEB_REPOSITORY }}:sha-${{ github.sha }} .
+          docker build -f Dockerfile \
+            -t "${REGISTRY}/${APP_REPOSITORY}:${SHA_TAG}" \
+            -t "${REGISTRY}/${APP_REPOSITORY}:latest" \
+            .
+
+          docker build -f docker/nginx/Dockerfile \
+            -t "${REGISTRY}/${WEB_REPOSITORY}:${SHA_TAG}" \
+            -t "${REGISTRY}/${WEB_REPOSITORY}:latest" \
+            .
 
       - name: Push images to ECR
         if: github.event_name != 'pull_request'
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SHA_TAG: sha-${{ github.sha }}
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.APP_REPOSITORY }}:sha-${{ github.sha }}
-          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.WEB_REPOSITORY }}:sha-${{ github.sha }}
+          set -euo pipefail
 
-  deploy-staging:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [test-and-build]
-    runs-on: ubuntu-latest
-    environment: staging
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+          docker push "${REGISTRY}/${APP_REPOSITORY}:${SHA_TAG}"
+          docker push "${REGISTRY}/${APP_REPOSITORY}:latest"
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          docker push "${REGISTRY}/${WEB_REPOSITORY}:${SHA_TAG}"
+          docker push "${REGISTRY}/${WEB_REPOSITORY}:latest"
 
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
-
-      - name: Install External Secrets Operator (CRDs)
+      - name: Export image URIs
+        id: meta
+        if: github.event_name != 'pull_request'
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SHA_TAG: sha-${{ github.sha }}
         run: |
-          helm repo add external-secrets https://charts.external-secrets.io
-          helm repo update
-          helm upgrade --install external-secrets external-secrets/external-secrets \
-            --namespace external-secrets \
-            --create-namespace \
-            --set installCRDs=true \
-            --wait \
-            --timeout 10m
+          set -euo pipefail
 
-      - name: Wait for External Secrets CRDs
-        run: |
-          kubectl wait --for=condition=Established --timeout=180s crd/externalsecrets.external-secrets.io
-          kubectl wait --for=condition=Established --timeout=180s crd/secretstores.external-secrets.io
-          kubectl wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io
-          kubectl -n external-secrets rollout status deploy/external-secrets --timeout=300s
-
-      - name: Deploy to staging
-        run: |
-          helm upgrade --install $HELM_RELEASE ./k8s/helm/e-shop \
-            --namespace $HELM_NAMESPACE \
-            --create-namespace \
-            --set image.app.tag=sha-${{ github.sha }} \
-            --set image.web.tag=sha-${{ github.sha }} \
-            --set ingress.host=staging.shop.example.com
+          echo "app_image=${REGISTRY}/${APP_REPOSITORY}:${SHA_TAG}" >> "$GITHUB_OUTPUT"
+          echo "web_image=${REGISTRY}/${WEB_REPOSITORY}:${SHA_TAG}" >> "$GITHUB_OUTPUT"
 
   deploy-prod:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [deploy-staging]
+    name: Deploy (production)
+    needs: [build]
     runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_GITHUB_ROLE_ARN != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS credentials (Access keys)
+        if: secrets.AWS_GITHUB_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || env.AWS_REGION }}
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
@@ -137,11 +136,20 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
+      - name: Set ECR registry
+        run: |
+          set -euo pipefail
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          echo "ECR_REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> "$GITHUB_ENV"
+
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+        run: |
+          set -euo pipefail
+          aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
 
       - name: Install External Secrets Operator (CRDs)
         run: |
+          set -euo pipefail
           helm repo add external-secrets https://charts.external-secrets.io
           helm repo update
           helm upgrade --install external-secrets external-secrets/external-secrets \
@@ -153,6 +161,7 @@ jobs:
 
       - name: Wait for External Secrets CRDs
         run: |
+          set -euo pipefail
           kubectl wait --for=condition=Established --timeout=180s crd/externalsecrets.external-secrets.io
           kubectl wait --for=condition=Established --timeout=180s crd/secretstores.external-secrets.io
           kubectl wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io
@@ -160,9 +169,24 @@ jobs:
 
       - name: Deploy to production
         run: |
+          set -euo pipefail
           helm upgrade --install $HELM_RELEASE ./k8s/helm/e-shop \
             --namespace $HELM_NAMESPACE \
             --create-namespace \
+            --set image.app.repository=$ECR_REGISTRY/${{ env.APP_REPOSITORY }} \
+            --set image.web.repository=$ECR_REGISTRY/${{ env.WEB_REPOSITORY }} \
             --set image.app.tag=sha-${{ github.sha }} \
             --set image.web.tag=sha-${{ github.sha }} \
-            --set ingress.host=shop.example.com
+            --set externalSecrets.remoteSecretName=/e-shop/prod/app \
+            --wait \
+            --timeout 10m
+
+      - name: Verify rollout (production)
+        run: |
+          set -euo pipefail
+          kubectl -n "$HELM_NAMESPACE" rollout status deploy/e-shop --timeout=600s
+
+      - name: Verify migrations job (production)
+        run: |
+          set -euo pipefail
+          kubectl -n "$HELM_NAMESPACE" wait --for=condition=complete job/e-shop-migrations --timeout=600s

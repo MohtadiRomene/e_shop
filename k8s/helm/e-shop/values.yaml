@@ -40,8 +40,8 @@ service:
 ingress:
   enabled: true
   className: alb
-  host: shop.example.com
-  certificateArn: arn:aws:acm:eu-west-1:111111111111:certificate/replace-me
+  host: ""
+  certificateArn: ""
   healthcheckPath: /healthz
 
 hpa:
@@ -57,6 +57,10 @@ externalSecrets:
   enabled: true
   secretStoreRef: aws-secretsmanager
   remoteSecretName: /e-shop/prod/app
+
+migrations:
+  enabled: true
+  backoffLimit: 1
 
 env:
   appEnv: prod
