@@ -17,6 +17,7 @@ env:
   WEB_REPOSITORY: e-shop/web
   HELM_RELEASE: e-shop
   HELM_NAMESPACE: e-shop
+  SONAR_HOST_URL: http://3.91.213.211:9000
 
 permissions:
   id-token: write   # OIDC GitHub → AWS
@@ -191,7 +192,6 @@ jobs:
 
       # ── Authentification AWS via OIDC (pas de clés stockées) ──
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
@@ -199,7 +199,6 @@ jobs:
 
       # ── Fallback : clés AWS classiques ──
       - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
@@ -271,17 +270,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Lancer l'app en local avec Docker pour scanner ──
-      - name: Configure AWS credentials
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+      # ── Authentification AWS ──
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Configure AWS credentials (Access Keys fallback)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Start application for DAST scan
         env:
@@ -372,14 +373,12 @@ jobs:
 
       # ── Authentification AWS ──
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
