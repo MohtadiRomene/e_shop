@@ -34,10 +34,15 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: app_test
-          MYSQL_USER: app
-          MYSQL_PASSWORD: app
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
         ports:
           - 3306:3306
+
+    env:
+      APP_ENV: test
+      APP_DEBUG: 0
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/app_test"
 
     steps:
       - uses: actions/checkout@v4
@@ -47,12 +52,20 @@ jobs:
         with:
           php-version: "8.4"
 
-      - run: composer install --no-interaction --prefer-dist
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
 
-      - run: php bin/console doctrine:database:create --if-not-exists
-      - run: php bin/console doctrine:migrations:migrate --no-interaction
+      - name: Wait for MySQL
+        run: sleep 20
 
-      - run: php bin/phpunit
+      - name: Create DB
+        run: php bin/console doctrine:database:create --if-not-exists
+
+      - name: Run migrations
+        run: php bin/console doctrine:migrations:migrate --no-interaction
+
+      - name: Run tests
+        run: php bin/phpunit
 
 # ═══════════════════════════════
 # STAGE 2 — SONARQUBE
@@ -62,6 +75,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: tests
     if: github.event_name == 'push'
+
+    env:
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/app_test"
 
     steps:
       - uses: actions/checkout@v4
@@ -88,22 +104,17 @@ jobs:
           SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
 
 # ═══════════════════════════════
-# STAGE 3 — BUILD & PUSH ECR
+# STAGE 3 — BUILD & PUSH
 # ═══════════════════════════════
   build:
-    name: Build & Push to ECR
+    name: Build & Push ECR
     runs-on: ubuntu-latest
     needs: tests
     if: github.event_name != 'pull_request'
 
-    outputs:
-      app_image: ${{ steps.meta.outputs.app_image }}
-      web_image: ${{ steps.meta.outputs.web_image }}
-
     steps:
       - uses: actions/checkout@v4
 
-      # ✅ AWS OIDC (SECURE)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -130,17 +141,8 @@ jobs:
           docker push $REGISTRY/$APP_REPOSITORY:$TAG
           docker push $REGISTRY/$WEB_REPOSITORY:$TAG
 
-      - name: Export images
-        id: meta
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          TAG: sha-${{ github.sha }}
-        run: |
-          echo "app_image=$REGISTRY/$APP_REPOSITORY:$TAG" >> $GITHUB_OUTPUT
-          echo "web_image=$REGISTRY/$WEB_REPOSITORY:$TAG" >> $GITHUB_OUTPUT
-
 # ═══════════════════════════════
-# STAGE 4 — DAST (ZAP)
+# STAGE 4 — DAST
 # ═══════════════════════════════
   dast:
     name: OWASP ZAP Scan
@@ -150,7 +152,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
@@ -175,7 +177,7 @@ jobs:
           fail_action: false
 
 # ═══════════════════════════════
-# STAGE 5 — DEPLOY EKS
+# STAGE 5 — DEPLOY
 # ═══════════════════════════════
   deploy:
     name: Deploy to EKS
@@ -186,7 +188,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
@@ -206,7 +208,7 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "ECR_REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com" >> $GITHUB_ENV
 
-      - name: Deploy with Helm
+      - name: Deploy Helm
         run: |
           helm upgrade --install $HELM_RELEASE ./k8s/helm/e-shop \
             --namespace $HELM_NAMESPACE \
