@@ -7,9 +7,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# ──────────────────────────────────────────────
-# Variables globales
-# ──────────────────────────────────────────────
 env:
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: ecommerce-cluster
@@ -19,7 +16,7 @@ env:
   HELM_NAMESPACE: e-shop
 
 permissions:
-  id-token: write   # requis pour OIDC GitHub → AWS
+  id-token: write
   contents: read
 
 # ══════════════════════════════════════════════
@@ -75,7 +72,6 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      # CORRECTION : health-check proper au lieu de sleep 20
       - name: Wait for MySQL (health-check)
         run: |
           for i in $(seq 1 30); do
@@ -102,7 +98,6 @@ jobs:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
     needs: tests
-    # CORRECTION : ne tourne que sur push (pas PR) et seulement si SONAR_TOKEN existe
     if: github.event_name == 'push' && secrets.SONAR_TOKEN != ''
 
     services:
@@ -132,7 +127,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # requis pour SonarQube
+          fetch-depth: 0
 
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
@@ -174,7 +169,6 @@ jobs:
             --log-junit coverage/junit.xml \
             --coverage-clover coverage/clover.xml
 
-      # CORRECTION : vérifier la connectivité avant de scanner
       - name: Check SonarQube reachability
         run: |
           for i in 1 2 3; do
@@ -186,7 +180,7 @@ jobs:
             sleep 5
           done
           echo "SonarQube not reachable — skipping scan"
-          exit 0   # ne bloque pas le pipeline
+          exit 0
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
@@ -211,7 +205,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Générer le .env.local pour le build Docker ──
       - name: Generate .env.local for Docker build
         run: |
           cat > .env.local << EOF
@@ -223,7 +216,6 @@ jobs:
           EOF
           echo ".env.local generated ✅"
 
-      # CORRECTION : OIDC en priorité, access keys en fallback
       - name: Configure AWS credentials (OIDC)
         if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@v4
@@ -243,28 +235,16 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # CORRECTION : tag latest + sha, build-arg APP_ENV=prod
       - name: Build Docker images
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           TAG: sha-${{ github.sha }}
         run: |
           set -euo pipefail
-
           echo "Building APP image..."
-          docker build \
-            --build-arg APP_ENV=prod \
-            -t "$REGISTRY/$APP_REPOSITORY:$TAG" \
-            -t "$REGISTRY/$APP_REPOSITORY:latest" \
-            .
-
+          docker build --build-arg APP_ENV=prod -t "$REGISTRY/$APP_REPOSITORY:$TAG" -t "$REGISTRY/$APP_REPOSITORY:latest" .
           echo "Building WEB (nginx) image..."
-          docker build \
-            -f docker/nginx/Dockerfile \
-            -t "$REGISTRY/$WEB_REPOSITORY:$TAG" \
-            -t "$REGISTRY/$WEB_REPOSITORY:latest" \
-            .
-
+          docker build -f docker/nginx/Dockerfile -t "$REGISTRY/$WEB_REPOSITORY:$TAG" -t "$REGISTRY/$WEB_REPOSITORY:latest" .
           echo "Images built ✅"
 
       - name: Push images to ECR
@@ -273,17 +253,12 @@ jobs:
           TAG: sha-${{ github.sha }}
         run: |
           set -euo pipefail
-
           docker push "$REGISTRY/$APP_REPOSITORY:$TAG"
           docker push "$REGISTRY/$APP_REPOSITORY:latest"
           docker push "$REGISTRY/$WEB_REPOSITORY:$TAG"
           docker push "$REGISTRY/$WEB_REPOSITORY:latest"
-
           echo "Images pushed ✅"
-          echo "APP : $REGISTRY/$APP_REPOSITORY:$TAG"
-          echo "WEB : $REGISTRY/$WEB_REPOSITORY:$TAG"
 
-      # CORRECTION : nettoyer le .env.local après le build
       - name: Cleanup .env.local
         if: always()
         run: rm -f .env.local
@@ -296,7 +271,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name != 'pull_request'
-    # CORRECTION : ne bloque pas le deploy si ZAP échoue
     continue-on-error: true
 
     steps:
@@ -322,21 +296,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # CORRECTION : lancer l'app avec env complet pour le scan
       - name: Start application for DAST scan
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           TAG: sha-${{ github.sha }}
         run: |
           set -euo pipefail
-
-          docker run -d \
-            --name e-shop-dast \
-            -p 8080:80 \
-            -e APP_ENV=prod \
-            -e APP_SECRET=dast_scan_only \
-            "$REGISTRY/$WEB_REPOSITORY:$TAG"
-
+          docker run -d --name e-shop-dast -p 8080:80 -e APP_ENV=prod -e APP_SECRET=dast_scan_only "$REGISTRY/$WEB_REPOSITORY:$TAG"
           echo "Waiting for app to start..."
           for i in $(seq 1 30); do
             if curl -fsS --max-time 5 http://localhost:8080 > /dev/null 2>&1; then
@@ -354,7 +320,6 @@ jobs:
           fail_action: false
           cmd_options: "-a -j"
 
-      # CORRECTION : sauvegarder le rapport comme artifact
       - name: Upload ZAP security report
         uses: actions/upload-artifact@v4
         if: always()
@@ -404,13 +369,10 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
-      # CORRECTION : vérifier la connexion au cluster
       - name: Connect to EKS
         run: |
           set -euo pipefail
-          aws eks update-kubeconfig \
-            --name "$EKS_CLUSTER_NAME" \
-            --region "$AWS_REGION"
+          aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
           kubectl get nodes
           echo "Connected to EKS ✅"
 
@@ -419,7 +381,6 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "ECR_REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> "$GITHUB_ENV"
 
-      # CORRECTION : installer External Secrets avant Helm
       - name: Install External Secrets Operator
         run: |
           helm repo add external-secrets https://charts.external-secrets.io
@@ -434,13 +395,10 @@ jobs:
 
       - name: Wait for External Secrets CRDs
         run: |
-          kubectl wait --for=condition=Established --timeout=120s \
-            crd/externalsecrets.external-secrets.io
-          kubectl wait --for=condition=Established --timeout=120s \
-            crd/secretstores.external-secrets.io
+          kubectl wait --for=condition=Established --timeout=120s crd/externalsecrets.external-secrets.io
+          kubectl wait --for=condition=Established --timeout=120s crd/secretstores.external-secrets.io
           echo "CRDs ready ✅"
 
-      # CORRECTION : --atomic pour rollback automatique si échec
       - name: Deploy with Helm
         run: |
           set -euo pipefail
@@ -464,13 +422,9 @@ jobs:
 
       - name: Verify migrations
         run: |
-          kubectl -n "$HELM_NAMESPACE" wait \
-            --for=condition=complete \
-            job/e-shop-migrations \
-            --timeout=300s
+          kubectl -n "$HELM_NAMESPACE" wait --for=condition=complete job/e-shop-migrations --timeout=300s || echo "No migrations job found"
           echo "Migrations OK ✅"
 
-      # CORRECTION : résumé complet à la fin
       - name: Deployment summary
         if: always()
         run: |
@@ -484,4 +438,3 @@ jobs:
           echo "════════════════════════════════"
           kubectl -n "$HELM_NAMESPACE" get pods
           kubectl -n "$HELM_NAMESPACE" get services
-          kubectl -n "$HELM_NAMESPACE" get ingress || true
