@@ -75,7 +75,6 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      # CORRECTION : health-check proper au lieu de sleep 20
       - name: Wait for MySQL (health-check)
         run: |
           for i in $(seq 1 30); do
@@ -102,8 +101,7 @@ jobs:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
     needs: tests
-    # CORRECTION : ne tourne que sur push (pas PR) et seulement si SONAR_TOKEN existe
-    if: github.event_name == 'push' && secrets.SONAR_TOKEN != ''
+    if: github.event_name == 'push'
 
     services:
       mysql:
@@ -132,7 +130,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # requis pour SonarQube
+          fetch-depth: 0
 
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
@@ -174,7 +172,6 @@ jobs:
             --log-junit coverage/junit.xml \
             --coverage-clover coverage/clover.xml
 
-      # CORRECTION : vérifier la connectivité avant de scanner
       - name: Check SonarQube reachability
         run: |
           for i in 1 2 3; do
@@ -186,7 +183,7 @@ jobs:
             sleep 5
           done
           echo "SonarQube not reachable — skipping scan"
-          exit 0   # ne bloque pas le pipeline
+          exit 0
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
@@ -202,6 +199,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: tests
     if: github.event_name != 'pull_request'
+    # ✅ FIX: mapper le secret dans env pour pouvoir l'utiliser dans les if: des steps
+    env:
+      HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
 
     outputs:
       registry: ${{ steps.login-ecr.outputs.registry }}
@@ -211,7 +211,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Générer le .env.local pour le build Docker ──
       - name: Generate .env.local for Docker build
         run: |
           cat > .env.local << EOF
@@ -223,16 +222,17 @@ jobs:
           EOF
           echo ".env.local generated ✅"
 
-      # CORRECTION : OIDC en priorité, access keys en fallback
+      # ✅ FIX: if: env.HAS_ROLE_ARN == 'true'  (au lieu de secrets.* dans if:)
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+        if: env.HAS_ROLE_ARN == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # ✅ FIX: if: env.HAS_ROLE_ARN == 'false'
       - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
+        if: env.HAS_ROLE_ARN == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
@@ -243,7 +243,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # CORRECTION : tag latest + sha, build-arg APP_ENV=prod
       - name: Build Docker images
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -283,7 +282,6 @@ jobs:
           echo "APP : $REGISTRY/$APP_REPOSITORY:$TAG"
           echo "WEB : $REGISTRY/$WEB_REPOSITORY:$TAG"
 
-      # CORRECTION : nettoyer le .env.local après le build
       - name: Cleanup .env.local
         if: always()
         run: rm -f .env.local
@@ -296,22 +294,26 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name != 'pull_request'
-    # CORRECTION : ne bloque pas le deploy si ZAP échoue
     continue-on-error: true
+    # ✅ FIX: mapper le secret dans env pour pouvoir l'utiliser dans les if: des steps
+    env:
+      HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ FIX: if: env.HAS_ROLE_ARN == 'true'
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+        if: env.HAS_ROLE_ARN == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # ✅ FIX: if: env.HAS_ROLE_ARN == 'false'
       - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
+        if: env.HAS_ROLE_ARN == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
@@ -322,7 +324,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # CORRECTION : lancer l'app avec env complet pour le scan
       - name: Start application for DAST scan
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -354,7 +355,6 @@ jobs:
           fail_action: false
           cmd_options: "-a -j"
 
-      # CORRECTION : sauvegarder le rapport comme artifact
       - name: Upload ZAP security report
         uses: actions/upload-artifact@v4
         if: always()
@@ -378,20 +378,25 @@ jobs:
     needs: [build, dast]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     environment: production
+    # ✅ FIX: mapper le secret dans env pour pouvoir l'utiliser dans les if: des steps
+    env:
+      HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ FIX: if: env.HAS_ROLE_ARN == 'true'
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+        if: env.HAS_ROLE_ARN == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # ✅ FIX: if: env.HAS_ROLE_ARN == 'false'
       - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
+        if: env.HAS_ROLE_ARN == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
@@ -404,7 +409,6 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
-      # CORRECTION : vérifier la connexion au cluster
       - name: Connect to EKS
         run: |
           set -euo pipefail
@@ -419,7 +423,6 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "ECR_REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> "$GITHUB_ENV"
 
-      # CORRECTION : installer External Secrets avant Helm
       - name: Install External Secrets Operator
         run: |
           helm repo add external-secrets https://charts.external-secrets.io
@@ -440,7 +443,6 @@ jobs:
             crd/secretstores.external-secrets.io
           echo "CRDs ready ✅"
 
-      # CORRECTION : --atomic pour rollback automatique si échec
       - name: Deploy with Helm
         run: |
           set -euo pipefail
@@ -470,7 +472,6 @@ jobs:
             --timeout=300s
           echo "Migrations OK ✅"
 
-      # CORRECTION : résumé complet à la fin
       - name: Deployment summary
         if: always()
         run: |
