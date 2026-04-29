@@ -198,6 +198,7 @@ jobs:
           exit 0
 
       - name: SonarQube Scan
+        continue-on-error: true   # ✅ Ne bloque pas le pipeline si SonarQube injoignable
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
