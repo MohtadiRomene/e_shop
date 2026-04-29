@@ -35,13 +35,13 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: app_test
+          MYSQL_DATABASE: app         # ✅ Symfony APP_ENV=test ajoutera _test → "app_test"
           MYSQL_USER: app
           MYSQL_PASSWORD: app
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uapp -papp --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -50,7 +50,7 @@ jobs:
       APP_ENV: test
       APP_DEBUG: 0
       APP_SECRET: test_secret_ci_only
-      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app_test?serverVersion=8.0.32&charset=utf8mb4"
+      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app?serverVersion=8.0.32&charset=utf8mb4"
       MAILER_DSN: "null://null"
 
     steps:
@@ -78,13 +78,19 @@ jobs:
       - name: Wait for MySQL (health-check)
         run: |
           for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -uapp -papp --silent 2>/dev/null; then
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent 2>/dev/null; then
               echo "MySQL ready ✅"
               break
             fi
             echo "Waiting for MySQL... (${i}/30)"
             sleep 3
           done
+
+      # ✅ Donner les droits CREATE à l'utilisateur app (root requis)
+      - name: Grant CREATE privileges to app user
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot \
+            -e "GRANT ALL PRIVILEGES ON \`app_%\`.* TO 'app'@'%'; FLUSH PRIVILEGES;"
 
       - name: Create & migrate database
         run: |
@@ -108,13 +114,13 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: app_test
+          MYSQL_DATABASE: app         # ✅ Symfony APP_ENV=test ajoutera _test → "app_test"
           MYSQL_USER: app
           MYSQL_PASSWORD: app
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uapp -papp --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -123,7 +129,7 @@ jobs:
       APP_ENV: test
       APP_DEBUG: 0
       APP_SECRET: test_secret_ci_only
-      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app_test?serverVersion=8.0.32&charset=utf8mb4"
+      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app?serverVersion=8.0.32&charset=utf8mb4"
       MAILER_DSN: "null://null"
 
     steps:
@@ -153,12 +159,18 @@ jobs:
       - name: Wait for MySQL
         run: |
           for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -uapp -papp --silent 2>/dev/null; then
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent 2>/dev/null; then
               echo "MySQL ready ✅"
               break
             fi
             sleep 3
           done
+
+      # ✅ Donner les droits CREATE à l'utilisateur app (root requis)
+      - name: Grant CREATE privileges to app user
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot \
+            -e "GRANT ALL PRIVILEGES ON \`app_%\`.* TO 'app'@'%'; FLUSH PRIVILEGES;"
 
       - name: Create & migrate database
         run: |
