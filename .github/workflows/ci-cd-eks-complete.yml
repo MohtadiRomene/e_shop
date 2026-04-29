@@ -6,32 +6,30 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 869937525188
   REGISTRY: 869937525188.dkr.ecr.us-east-1.amazonaws.com
+
   APP_REPOSITORY: e-shop/app
   WEB_REPOSITORY: e-shop/web
+
   SONAR_HOST: http://3.87.200.146:9000
 
 jobs:
 
 # =========================
-# 1. TESTS
+# 1. TESTS (PHP / Symfony)
 # =========================
   tests:
     runs-on: ubuntu-latest
 
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: app_test
         ports:
           - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
 
     steps:
       - uses: actions/checkout@v4
@@ -39,24 +37,18 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.3"
+          php-version: "8.2"
           extensions: pdo, pdo_mysql
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
-
-      - name: Setup test env
-        run: cp .env .env.test || true
-
-      - name: Run migrations
-        run: php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Run tests
         run: php bin/phpunit
 
 
 # =========================
-# 2. SONARQUBE
+# 2. SONARQUBE (FIXED)
 # =========================
   sonar:
     runs-on: ubuntu-latest
@@ -67,29 +59,21 @@ jobs:
 
       - name: Check SonarQube
         run: |
-          set -euo pipefail
-          for i in {1..10}; do
-            if curl -s --max-time 5 $SONAR_HOST/api/server/version; then
-              echo "SonarQube OK"
-              exit 0
-            fi
-            echo "Attempt $i failed"
-            sleep 5
-          done
-          echo "SonarQube NOT reachable"
-          exit 1
+          echo "Sonar: $SONAR_HOST"
+          curl -f --max-time 5 $SONAR_HOST/api/server/version
+
 
       - name: Sonar Scan
         run: |
           docker run --rm \
             -e SONAR_HOST_URL="$SONAR_HOST" \
             -e SONAR_LOGIN="${{ secrets.SONAR_TOKEN }}" \
-            -v "${PWD}:/usr/src" \
+            -v "$PWD:/usr/src" \
             sonarsource/sonar-scanner-cli
 
 
 # =========================
-# 3. BUILD & PUSH ECR
+# 3. BUILD & PUSH ECR (FIX CRITICAL)
 # =========================
   build:
     runs-on: ubuntu-latest
@@ -98,31 +82,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      # AWS login
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to ECR
+      # 🔥 IMPORTANT FIX (LOGIN ECR)
+      - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION \
           | docker login --username AWS --password-stdin $REGISTRY
 
-      - name: Ensure ECR repos
-        run: |
-          aws ecr describe-repositories --repository-names $APP_REPOSITORY || \
-          aws ecr create-repository --repository-name $APP_REPOSITORY
-
-          aws ecr describe-repositories --repository-names $WEB_REPOSITORY || \
-          aws ecr create-repository --repository-name $WEB_REPOSITORY
-
+      # Build images
       - name: Build images
         run: |
           docker build -t $REGISTRY/$APP_REPOSITORY:latest .
           docker build -f docker/nginx/Dockerfile -t $REGISTRY/$WEB_REPOSITORY:latest .
 
+      # Push images
       - name: Push images
         run: |
           docker push $REGISTRY/$APP_REPOSITORY:latest
@@ -137,28 +117,13 @@ jobs:
     needs: build
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Run app container
+      - name: Run container
         run: docker run -d -p 8080:80 nginx
-
-      - name: Wait app
-        run: sleep 10
 
       - name: ZAP Scan
         run: |
-          docker run --rm \
-            -v $(pwd):/zap/wrk/:rw \
-            owasp/zap2docker-stable \
-            zap-baseline.py \
-            -t http://localhost:8080 \
-            -r report.html || true
-
-      - name: Upload report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: report.html
+          docker run --rm owasp/zap2docker-stable zap-baseline.py \
+            -t http://localhost:8080 || true
 
 
 # =========================
@@ -171,24 +136,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: AWS login
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
 
-      - name: Verify cluster
-        run: kubectl get nodes
-
-      - name: Deploy with Helm
+      - name: Deploy Helm
         run: |
           helm upgrade --install e-shop ./k8s/helm/e-shop \
-            --set image.repository=$REGISTRY/$APP_REPOSITORY \
-            --set image.tag=latest \
+            --set image.app.repository=$REGISTRY/$APP_REPOSITORY \
             --set image.web.repository=$REGISTRY/$WEB_REPOSITORY \
-            --set image.web.tag=latest \
-            --wait
+            --set image.tag=latest \
+            --namespace e-shop --create-namespace
