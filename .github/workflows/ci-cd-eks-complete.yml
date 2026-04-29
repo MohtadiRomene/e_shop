@@ -8,6 +8,7 @@ env:
   AWS_REGION: us-east-1
   APP_REPOSITORY: e-shop/app
   WEB_REPOSITORY: e-shop/web
+  SONAR_HOST: http://3.87.200.146:9000
 
 jobs:
 
@@ -47,8 +48,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Prepare env
-        run: |
-          cp .env .env.test || true
+        run: cp .env .env.test || true
 
       - name: Wait for MySQL
         run: |
@@ -74,18 +74,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check SonarQube connectivity
+        run: |
+          echo "Checking SonarQube at $SONAR_HOST"
+          for i in {1..5}; do
+            if curl -s --max-time 5 $SONAR_HOST/api/server/version; then
+              echo "SonarQube reachable ✅"
+              exit 0
+            fi
+            echo "Attempt $i failed..."
+            sleep 5
+          done
+          echo "❌ SonarQube not reachable"
+          exit 1
+
       - name: Sonar Scan
         run: |
-          if curl -s ${{ secrets.SONAR_HOST }} > /dev/null; then
-            docker run --rm \
-              -e SONAR_HOST_URL="${{ secrets.SONAR_HOST }}" \
-              -e SONAR_LOGIN="${{ secrets.SONAR_TOKEN }}" \
-              -v "${PWD}:/usr/src" \
-              sonarsource/sonar-scanner-cli
-          else
-            echo "SonarQube unreachable"
-            exit 1
-          fi
+          docker run --rm \
+            -e SONAR_HOST_URL="$SONAR_HOST" \
+            -e SONAR_LOGIN="${{ secrets.SONAR_TOKEN }}" \
+            -v "${PWD}:/usr/src" \
+            sonarsource/sonar-scanner-cli
 
 
 # =========================
@@ -140,8 +149,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run test container
-        run: |
-          docker run -d -p 8080:80 nginx
+        run: docker run -d -p 8080:80 nginx
 
       - name: Wait
         run: sleep 10
