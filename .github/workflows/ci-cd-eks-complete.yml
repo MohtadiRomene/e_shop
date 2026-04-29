@@ -2,7 +2,7 @@ name: CI/CD EKS Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   AWS_REGION: us-east-1
@@ -21,20 +21,17 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8
+        image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: app_test
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
-
-    env:
-      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/app_test"
+          --health-retries=10
 
     steps:
       - uses: actions/checkout@v4
@@ -42,20 +39,21 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.3"
           extensions: pdo, pdo_mysql
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
-      - name: Wait MySQL
-        run: sleep 15
+      - name: Setup test env
+        run: cp .env .env.test || true
 
       - name: Run migrations
         run: php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Run tests
         run: php bin/phpunit
+
 
 # =========================
 # 2. SONARQUBE
@@ -67,16 +65,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug Sonar Host
-        run: echo "SONAR_HOST=$SONAR_HOST"
-
-      - name: Check Sonar connectivity
+      - name: Check SonarQube
         run: |
           set -euo pipefail
-          for i in {1..5}; do
-            echo "Checking SonarQube..."
-            if curl -s --max-time 5 "$SONAR_HOST/api/server/version"; then
-              echo "SonarQube reachable"
+          for i in {1..10}; do
+            if curl -s --max-time 5 $SONAR_HOST/api/server/version; then
+              echo "SonarQube OK"
               exit 0
             fi
             echo "Attempt $i failed"
@@ -93,6 +87,7 @@ jobs:
             -v "${PWD}:/usr/src" \
             sonarsource/sonar-scanner-cli
 
+
 # =========================
 # 3. BUILD & PUSH ECR
 # =========================
@@ -103,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -115,6 +110,14 @@ jobs:
           aws ecr get-login-password --region $AWS_REGION \
           | docker login --username AWS --password-stdin $REGISTRY
 
+      - name: Ensure ECR repos
+        run: |
+          aws ecr describe-repositories --repository-names $APP_REPOSITORY || \
+          aws ecr create-repository --repository-name $APP_REPOSITORY
+
+          aws ecr describe-repositories --repository-names $WEB_REPOSITORY || \
+          aws ecr create-repository --repository-name $WEB_REPOSITORY
+
       - name: Build images
         run: |
           docker build -t $REGISTRY/$APP_REPOSITORY:latest .
@@ -124,6 +127,7 @@ jobs:
         run: |
           docker push $REGISTRY/$APP_REPOSITORY:latest
           docker push $REGISTRY/$WEB_REPOSITORY:latest
+
 
 # =========================
 # 4. DAST (ZAP)
@@ -135,13 +139,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run container
+      - name: Run app container
         run: docker run -d -p 8080:80 nginx
 
       - name: Wait app
         run: sleep 10
 
-      - name: ZAP scan
+      - name: ZAP Scan
         run: |
           docker run --rm \
             -v $(pwd):/zap/wrk/:rw \
@@ -156,6 +160,7 @@ jobs:
           name: zap-report
           path: report.html
 
+
 # =========================
 # 5. DEPLOY EKS
 # =========================
@@ -166,7 +171,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -176,9 +181,14 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
 
+      - name: Verify cluster
+        run: kubectl get nodes
+
       - name: Deploy with Helm
         run: |
           helm upgrade --install e-shop ./k8s/helm/e-shop \
             --set image.repository=$REGISTRY/$APP_REPOSITORY \
             --set image.tag=latest \
+            --set image.web.repository=$REGISTRY/$WEB_REPOSITORY \
+            --set image.web.tag=latest \
             --wait
