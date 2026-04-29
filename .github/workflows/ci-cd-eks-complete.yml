@@ -14,10 +14,11 @@ env:
 
   SONAR_HOST: http://3.87.200.146:9000
 
+
 jobs:
 
 # =========================
-# 1. TESTS (Symfony + MySQL)
+# 1. TESTS
 # =========================
   tests:
     runs-on: ubuntu-latest
@@ -38,7 +39,6 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
-          extensions: pdo, pdo_mysql
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
@@ -48,7 +48,7 @@ jobs:
 
 
 # =========================
-# 2. SONARQUBE (FIXED)
+# 2. SONARQUBE
 # =========================
   sonar:
     runs-on: ubuntu-latest
@@ -57,22 +57,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Sonar connectivity
-        run: |
-          echo "Testing Sonar: $SONAR_HOST"
-          curl -f --max-time 5 $SONAR_HOST/api/server/version
+      - name: Check Sonar
+        run: curl -f $SONAR_HOST/api/server/version
 
-      - name: Sonar Scan
+      - name: Sonar scan
         run: |
           docker run --rm \
-            -e SONAR_HOST_URL="$SONAR_HOST" \
-            -e SONAR_LOGIN="${{ secrets.SONAR_TOKEN }}" \
+            -e SONAR_HOST_URL=$SONAR_HOST \
+            -e SONAR_LOGIN=${{ secrets.SONAR_TOKEN }} \
             -v "$PWD:/usr/src" \
             sonarsource/sonar-scanner-cli
 
 
 # =========================
-# 3. BUILD + PUSH ECR (FIXED 100%)
+# 3. BUILD & PUSH ECR (FIXED)
 # =========================
   build:
     runs-on: ubuntu-latest
@@ -81,7 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # AWS credentials
+      # AWS LOGIN
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -89,20 +87,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # CHECK ACCOUNT (DEBUG SAFE)
-      - name: Check AWS Account
+      # CHECK ACCOUNT (DEBUG)
+      - name: Verify AWS Account
         run: aws sts get-caller-identity
 
-      # CREATE REPOS IF NOT EXIST (IMPORTANT FIX)
-      - name: Ensure ECR repositories exist
+      # FORCE CREATE ECR (IMPORTANT FIX)
+      - name: Ensure ECR Repositories exist
         run: |
-          aws ecr describe-repositories --repository-names $APP_REPOSITORY || \
-          aws ecr create-repository --repository-name $APP_REPOSITORY
+          aws ecr create-repository --repository-name $APP_REPOSITORY --region $AWS_REGION || true
+          aws ecr create-repository --repository-name $WEB_REPOSITORY --region $AWS_REGION || true
 
-          aws ecr describe-repositories --repository-names $WEB_REPOSITORY || \
-          aws ecr create-repository --repository-name $WEB_REPOSITORY
-
-      # LOGIN ECR (FIXED)
+      # LOGIN ECR
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION \
@@ -132,7 +127,7 @@ jobs:
       - name: Run container
         run: docker run -d -p 8080:80 nginx
 
-      - name: ZAP Scan
+      - name: ZAP scan
         run: |
           docker run --rm owasp/zap2docker-stable \
             zap-baseline.py -t http://localhost:8080 || true
@@ -158,10 +153,7 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
 
-      - name: Verify cluster
-        run: kubectl get nodes
-
-      - name: Deploy with Helm
+      - name: Deploy Helm
         run: |
           helm upgrade --install e-shop ./k8s/helm/e-shop \
             --namespace e-shop --create-namespace \
