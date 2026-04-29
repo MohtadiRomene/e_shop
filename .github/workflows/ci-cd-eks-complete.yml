@@ -6,6 +6,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  REGISTRY: 869937525188.dkr.ecr.us-east-1.amazonaws.com
   APP_REPOSITORY: e-shop/app
   WEB_REPOSITORY: e-shop/web
   SONAR_HOST: http://3.87.200.146:9000
@@ -79,13 +80,13 @@ jobs:
           echo "Checking SonarQube at $SONAR_HOST"
           for i in {1..5}; do
             if curl -s --max-time 5 $SONAR_HOST/api/server/version; then
-              echo "SonarQube reachable ✅"
+              echo "SonarQube reachable"
               exit 0
             fi
             echo "Attempt $i failed..."
             sleep 5
           done
-          echo "❌ SonarQube not reachable"
+          echo "SonarQube not reachable"
           exit 1
 
       - name: Sonar Scan
@@ -117,25 +118,29 @@ jobs:
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION \
-          | docker login --username AWS --password-stdin \
-          $(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com
+          | docker login --username AWS --password-stdin $REGISTRY
 
-      - name: Create ECR repos if not exist
+      - name: Ensure ECR repos exist
         run: |
-          aws ecr describe-repositories --repository-names $APP_REPOSITORY || \
-          aws ecr create-repository --repository-name $APP_REPOSITORY
+          set -e
 
-          aws ecr describe-repositories --repository-names $WEB_REPOSITORY || \
-          aws ecr create-repository --repository-name $WEB_REPOSITORY
+          if ! aws ecr describe-repositories --repository-names "$APP_REPOSITORY" > /dev/null 2>&1; then
+            echo "Creating $APP_REPOSITORY"
+            aws ecr create-repository --repository-name "$APP_REPOSITORY"
+          fi
+
+          if ! aws ecr describe-repositories --repository-names "$WEB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Creating $WEB_REPOSITORY"
+            aws ecr create-repository --repository-name "$WEB_REPOSITORY"
+          fi
+
+      - name: Wait for ECR
+        run: sleep 5
 
       - name: Build & Push
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-          TAG=latest
-
-          docker build -t $REGISTRY/$APP_REPOSITORY:$TAG .
-          docker push $REGISTRY/$APP_REPOSITORY:$TAG
+          docker build -t $REGISTRY/$APP_REPOSITORY:latest .
+          docker push $REGISTRY/$APP_REPOSITORY:latest
 
 
 # =========================
@@ -195,9 +200,6 @@ jobs:
 
       - name: Deploy with Helm
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
           helm upgrade --install e-shop ./k8s/helm/e-shop \
             --set image.repository=$REGISTRY/$APP_REPOSITORY \
-            --set image.tag=latest 
+            --set image.tag=latest
