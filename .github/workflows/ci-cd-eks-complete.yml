@@ -6,14 +6,12 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  AWS_ACCOUNT_ID: 869937525188
-  REGISTRY: 869937525188.dkr.ecr.us-east-1.amazonaws.com
-
-  APP_REPOSITORY: e-shop/app
-  WEB_REPOSITORY: e-shop/web
-
+  ECR_APP: e-shop/app
+  ECR_WEB: e-shop/web
+  EKS_CLUSTER: ecommerce-cluster
+  HELM_RELEASE: e-shop
+  HELM_NAMESPACE: e-shop
   SONAR_HOST: http://3.87.200.146:9000
-
 
 jobs:
 
@@ -43,12 +41,22 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Wait MySQL
+        run: |
+          for i in {1..10}; do
+            mysqladmin ping -h127.0.0.1 -uroot -proot && break
+            sleep 3
+          done
+
+      - name: Run migrations
+        run: php bin/console doctrine:migrations:migrate --no-interaction
+
       - name: Run tests
         run: php bin/phpunit
 
 
 # =========================
-# 2. SONARQUBE
+# 2. SONARQUBE (FIXED)
 # =========================
   sonar:
     runs-on: ubuntu-latest
@@ -57,20 +65,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Sonar
-        run: curl -f $SONAR_HOST/api/server/version
+      - name: Check SonarQube
+        run: |
+          curl -s --max-time 5 $SONAR_HOST/api/server/version || exit 1
 
-      - name: Sonar scan
+      - name: Sonar Scan
         run: |
           docker run --rm \
-            -e SONAR_HOST_URL=$SONAR_HOST \
-            -e SONAR_LOGIN=${{ secrets.SONAR_TOKEN }} \
             -v "$PWD:/usr/src" \
-            sonarsource/sonar-scanner-cli
+            sonarsource/sonar-scanner-cli \
+            -Dsonar.host.url=$SONAR_HOST \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
 
 # =========================
-# 3. BUILD & PUSH ECR (FIXED)
+# 3. BUILD & PUSH ECR (FIX COMPLET)
 # =========================
   build:
     runs-on: ubuntu-latest
@@ -79,41 +88,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # AWS LOGIN
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # CHECK ACCOUNT (DEBUG)
-      - name: Verify AWS Account
-        run: aws sts get-caller-identity
-
-      # FORCE CREATE ECR (IMPORTANT FIX)
-      - name: Ensure ECR Repositories exist
+      - name: Get AWS Account ID
         run: |
-          aws ecr create-repository --repository-name $APP_REPOSITORY --region $AWS_REGION || true
-          aws ecr create-repository --repository-name $WEB_REPOSITORY --region $AWS_REGION || true
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com" >> $GITHUB_ENV
 
-      # LOGIN ECR
-      - name: Login to ECR
+      - name: Login ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION \
-          | docker login --username AWS --password-stdin $REGISTRY
+          aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS --password-stdin $REGISTRY
 
-      # BUILD IMAGES
       - name: Build images
         run: |
-          docker build -t $REGISTRY/$APP_REPOSITORY:latest .
-          docker build -f docker/nginx/Dockerfile -t $REGISTRY/$WEB_REPOSITORY:latest .
+          docker build -t $REGISTRY/$ECR_APP:latest .
+          docker build -f docker/nginx/Dockerfile -t $REGISTRY/$ECR_WEB:latest .
 
-      # PUSH IMAGES
       - name: Push images
         run: |
-          docker push $REGISTRY/$APP_REPOSITORY:latest
-          docker push $REGISTRY/$WEB_REPOSITORY:latest
+          docker push $REGISTRY/$ECR_APP:latest
+          docker push $REGISTRY/$ECR_WEB:latest
 
 
 # =========================
@@ -124,17 +124,21 @@ jobs:
     needs: build
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Run container
         run: docker run -d -p 8080:80 nginx
 
-      - name: ZAP scan
+      - name: ZAP Scan
         run: |
-          docker run --rm owasp/zap2docker-stable \
+          docker run --rm \
+            -v $(pwd):/zap/wrk/ \
+            owasp/zap2docker-stable \
             zap-baseline.py -t http://localhost:8080 || true
 
 
 # =========================
-# 5. DEPLOY EKS
+# 5. DEPLOY EKS (FIXED)
 # =========================
   deploy:
     runs-on: ubuntu-latest
@@ -146,17 +150,22 @@ jobs:
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
+        run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
 
       - name: Deploy Helm
         run: |
-          helm upgrade --install e-shop ./k8s/helm/e-shop \
-            --namespace e-shop --create-namespace \
-            --set image.app.repository=$REGISTRY/$APP_REPOSITORY \
-            --set image.web.repository=$REGISTRY/$WEB_REPOSITORY \
-            --set image.tag=latest
+          helm upgrade --install $HELM_RELEASE ./k8s/helm/e-shop \
+            --namespace $HELM_NAMESPACE \
+            --create-namespace \
+            --set image.app.repository=$REGISTRY/$ECR_APP \
+            --set image.web.repository=$REGISTRY/$ECR_WEB \
+            --set image.tag=latest \
+            --wait
+
+      - name: Verify
+        run: kubectl get pods -n $HELM_NAMESPACE
