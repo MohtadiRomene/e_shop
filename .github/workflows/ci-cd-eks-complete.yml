@@ -28,10 +28,13 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+
+    env:
+      DATABASE_URL: "mysql://root:root@127.0.0.1:3306/app_test"
 
     steps:
       - uses: actions/checkout@v4
@@ -42,28 +45,17 @@ jobs:
           php-version: "8.2"
           extensions: pdo, pdo_mysql
 
-      - name: Install MySQL client
-        run: sudo apt-get update && sudo apt-get install -y mysql-client
-
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
-      - name: Prepare env
-        run: cp .env .env.test || true
-
-      - name: Wait for MySQL
-        run: |
-          for i in {1..10}; do
-            mysqladmin ping -h127.0.0.1 -uroot -proot && break
-            sleep 3
-          done
+      - name: Wait MySQL
+        run: sleep 15
 
       - name: Run migrations
         run: php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Run tests
         run: php bin/phpunit
-
 
 # =========================
 # 2. SONARQUBE
@@ -75,18 +67,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check SonarQube connectivity
+      - name: Debug Sonar Host
+        run: echo "SONAR_HOST=$SONAR_HOST"
+
+      - name: Check Sonar connectivity
         run: |
-          echo "Checking SonarQube at $SONAR_HOST"
+          set -euo pipefail
           for i in {1..5}; do
-            if curl -s --max-time 5 $SONAR_HOST/api/server/version; then
+            echo "Checking SonarQube..."
+            if curl -s --max-time 5 "$SONAR_HOST/api/server/version"; then
               echo "SonarQube reachable"
               exit 0
             fi
-            echo "Attempt $i failed..."
+            echo "Attempt $i failed"
             sleep 5
           done
-          echo "SonarQube not reachable"
+          echo "SonarQube NOT reachable"
           exit 1
 
       - name: Sonar Scan
@@ -97,9 +93,8 @@ jobs:
             -v "${PWD}:/usr/src" \
             sonarsource/sonar-scanner-cli
 
-
 # =========================
-# 3. BUILD & PUSH (ECR)
+# 3. BUILD & PUSH ECR
 # =========================
   build:
     runs-on: ubuntu-latest
@@ -113,35 +108,22 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          region: ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION \
           | docker login --username AWS --password-stdin $REGISTRY
 
-      - name: Ensure ECR repos exist
-        run: |
-          set -e
-
-          if ! aws ecr describe-repositories --repository-names "$APP_REPOSITORY" > /dev/null 2>&1; then
-            echo "Creating $APP_REPOSITORY"
-            aws ecr create-repository --repository-name "$APP_REPOSITORY"
-          fi
-
-          if ! aws ecr describe-repositories --repository-names "$WEB_REPOSITORY" > /dev/null 2>&1; then
-            echo "Creating $WEB_REPOSITORY"
-            aws ecr create-repository --repository-name "$WEB_REPOSITORY"
-          fi
-
-      - name: Wait for ECR
-        run: sleep 5
-
-      - name: Build & Push
+      - name: Build images
         run: |
           docker build -t $REGISTRY/$APP_REPOSITORY:latest .
-          docker push $REGISTRY/$APP_REPOSITORY:latest
+          docker build -f docker/nginx/Dockerfile -t $REGISTRY/$WEB_REPOSITORY:latest .
 
+      - name: Push images
+        run: |
+          docker push $REGISTRY/$APP_REPOSITORY:latest
+          docker push $REGISTRY/$WEB_REPOSITORY:latest
 
 # =========================
 # 4. DAST (ZAP)
@@ -153,10 +135,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run test container
+      - name: Run container
         run: docker run -d -p 8080:80 nginx
 
-      - name: Wait
+      - name: Wait app
         run: sleep 10
 
       - name: ZAP scan
@@ -174,9 +156,8 @@ jobs:
           name: zap-report
           path: report.html
 
-
 # =========================
-# 5. DEPLOY (EKS)
+# 5. DEPLOY EKS
 # =========================
   deploy:
     runs-on: ubuntu-latest
@@ -190,16 +171,14 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          region: ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
-
-      - name: Verify cluster
-        run: kubectl get nodes
 
       - name: Deploy with Helm
         run: |
           helm upgrade --install e-shop ./k8s/helm/e-shop \
             --set image.repository=$REGISTRY/$APP_REPOSITORY \
-            --set image.tag=latest
+            --set image.tag=latest \
+            --wait
