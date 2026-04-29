@@ -17,7 +17,7 @@ env:
 jobs:
 
 # =========================
-# 1. TESTS (PHP / Symfony)
+# 1. TESTS (Symfony + MySQL)
 # =========================
   tests:
     runs-on: ubuntu-latest
@@ -57,11 +57,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check SonarQube
+      - name: Check Sonar connectivity
         run: |
-          echo "Sonar: $SONAR_HOST"
+          echo "Testing Sonar: $SONAR_HOST"
           curl -f --max-time 5 $SONAR_HOST/api/server/version
-
 
       - name: Sonar Scan
         run: |
@@ -73,7 +72,7 @@ jobs:
 
 
 # =========================
-# 3. BUILD & PUSH ECR (FIX CRITICAL)
+# 3. BUILD + PUSH ECR (FIXED 100%)
 # =========================
   build:
     runs-on: ubuntu-latest
@@ -82,7 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # AWS login
+      # AWS credentials
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -90,19 +89,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 🔥 IMPORTANT FIX (LOGIN ECR)
-      - name: Login to Amazon ECR
+      # CHECK ACCOUNT (DEBUG SAFE)
+      - name: Check AWS Account
+        run: aws sts get-caller-identity
+
+      # CREATE REPOS IF NOT EXIST (IMPORTANT FIX)
+      - name: Ensure ECR repositories exist
+        run: |
+          aws ecr describe-repositories --repository-names $APP_REPOSITORY || \
+          aws ecr create-repository --repository-name $APP_REPOSITORY
+
+          aws ecr describe-repositories --repository-names $WEB_REPOSITORY || \
+          aws ecr create-repository --repository-name $WEB_REPOSITORY
+
+      # LOGIN ECR (FIXED)
+      - name: Login to ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION \
           | docker login --username AWS --password-stdin $REGISTRY
 
-      # Build images
+      # BUILD IMAGES
       - name: Build images
         run: |
           docker build -t $REGISTRY/$APP_REPOSITORY:latest .
           docker build -f docker/nginx/Dockerfile -t $REGISTRY/$WEB_REPOSITORY:latest .
 
-      # Push images
+      # PUSH IMAGES
       - name: Push images
         run: |
           docker push $REGISTRY/$APP_REPOSITORY:latest
@@ -122,8 +134,8 @@ jobs:
 
       - name: ZAP Scan
         run: |
-          docker run --rm owasp/zap2docker-stable zap-baseline.py \
-            -t http://localhost:8080 || true
+          docker run --rm owasp/zap2docker-stable \
+            zap-baseline.py -t http://localhost:8080 || true
 
 
 # =========================
@@ -136,7 +148,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: AWS login
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
@@ -146,10 +158,13 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
 
-      - name: Deploy Helm
+      - name: Verify cluster
+        run: kubectl get nodes
+
+      - name: Deploy with Helm
         run: |
           helm upgrade --install e-shop ./k8s/helm/e-shop \
+            --namespace e-shop --create-namespace \
             --set image.app.repository=$REGISTRY/$APP_REPOSITORY \
             --set image.web.repository=$REGISTRY/$WEB_REPOSITORY \
-            --set image.tag=latest \
-            --namespace e-shop --create-namespace
+            --set image.tag=latest
