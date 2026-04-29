@@ -3,6 +3,9 @@ name: CI/CD EKS — e-shop
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
@@ -11,22 +14,22 @@ env:
   WEB_REPOSITORY: e-shop/web
   HELM_RELEASE: e-shop
   HELM_NAMESPACE: e-shop
-  SONAR_HOST_URL: http://35.171.229.243:9000
 
 permissions:
   id-token: write
   contents: read
 
+jobs:
+
 # =========================
 # 1. TESTS
 # =========================
-jobs:
   tests:
     runs-on: ubuntu-latest
 
     services:
       mysql:
-        image: mysql:8
+        image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: app
@@ -37,33 +40,37 @@ jobs:
 
     env:
       APP_ENV: test
-      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app?serverVersion=8.0"
+      APP_DEBUG: 0
+      APP_SECRET: test_secret_ci_only
+      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app?serverVersion=8.0.32&charset=utf8mb4"
+      MAILER_DSN: "null://null"
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
-          extensions: pdo_mysql
+          php-version: "8.4"
+          extensions: ctype, iconv, pdo_mysql
 
-      - run: composer install --no-interaction
+      - run: composer install --no-interaction --prefer-dist
 
-      - name: Wait MySQL
+      - name: Wait for MySQL
         run: |
           for i in {1..10}; do
             mysqladmin ping -h127.0.0.1 -uroot -proot && break
             sleep 3
           done
 
-      - name: Grant rights
+      - name: Grant privileges
         run: |
           mysql -h127.0.0.1 -uroot -proot \
-          -e "GRANT ALL PRIVILEGES ON *.* TO 'app'@'%'; FLUSH PRIVILEGES;"
+          -e "GRANT ALL PRIVILEGES ON app_%.* TO 'app'@'%'; FLUSH PRIVILEGES;"
 
       - run: php bin/console doctrine:database:create --if-not-exists
       - run: php bin/console doctrine:migrations:migrate --no-interaction
       - run: php bin/phpunit
+
 
 # =========================
 # 2. SONAR
@@ -71,31 +78,34 @@ jobs:
   sonar:
     runs-on: ubuntu-latest
     needs: tests
+    if: github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Sonar
+      - name: Check SonarQube reachability
         run: |
-          for i in {1..3}; do
-            if curl -fsS --max-time 10 $SONAR_HOST_URL/api/server/version; then
-              echo "OK"
+          for i in 1 2 3; do
+            if curl -fsS --max-time 10 "http://35.171.229.243:9000/api/server/version" > /dev/null; then
+              echo "SonarQube reachable ✅"
               exit 0
             fi
+            echo "Attempt ${i}/3 failed. Retrying..."
             sleep 5
           done
-          echo "Sonar unreachable -> skip"
+          echo "SonarQube not reachable — skipping scan"
           exit 0
 
-      - name: Scan
+      - name: SonarQube Scan
         continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+          SONAR_HOST_URL: "http://35.171.229.243:9000"
+
 
 # =========================
-# 3. BUILD & PUSH
+# 3. BUILD & PUSH ECR
 # =========================
   build:
     runs-on: ubuntu-latest
@@ -110,7 +120,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login ECR
+      - name: Login to ECR
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com" >> $GITHUB_ENV
@@ -125,22 +135,53 @@ jobs:
           aws ecr describe-repositories --repository-names $WEB_REPOSITORY || \
           aws ecr create-repository --repository-name $WEB_REPOSITORY
 
-      - name: Build
+      - name: Build images
         run: |
           docker build -t $REGISTRY/$APP_REPOSITORY:latest .
           docker build -f docker/nginx/Dockerfile -t $REGISTRY/$WEB_REPOSITORY:latest .
 
-      - name: Push
+      - name: Push images
         run: |
           docker push $REGISTRY/$APP_REPOSITORY:latest
           docker push $REGISTRY/$WEB_REPOSITORY:latest
 
+
 # =========================
-# 4. DEPLOY EKS
+# 4. DAST
+# =========================
+  dast:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run container
+        run: docker run -d -p 8080:80 nginx
+
+      - run: sleep 10
+
+      - name: ZAP scan
+        run: |
+          docker run --rm \
+            -v $(pwd):/zap/wrk/:rw \
+            owasp/zap2docker-stable \
+            zap-baseline.py \
+            -t http://localhost:8080 \
+            -r report.html || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report.html
+
+
+# =========================
+# 5. DEPLOY
 # =========================
   deploy:
     runs-on: ubuntu-latest
-    needs: build
+    needs: dast
 
     steps:
       - uses: actions/checkout@v4
@@ -155,7 +196,7 @@ jobs:
       - uses: azure/setup-helm@v4
 
       - name: Connect EKS
-        run: aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+        run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
 
       - name: Set registry
         run: |
@@ -164,8 +205,8 @@ jobs:
 
       - name: Deploy
         run: |
-          helm upgrade --install $HELM_RELEASE ./k8s/helm/e-shop \
-            --namespace $HELM_NAMESPACE \
+          helm upgrade --install e-shop ./k8s/helm/e-shop \
+            --namespace e-shop \
             --create-namespace \
             --set image.app.repository=$ECR_REGISTRY/$APP_REPOSITORY \
             --set image.web.repository=$ECR_REGISTRY/$WEB_REPOSITORY \
@@ -175,4 +216,4 @@ jobs:
 
       - name: Verify
         run: |
-          kubectl get pods -n $HELM_NAMESPACE
+          kubectl get pods -n e-shop
