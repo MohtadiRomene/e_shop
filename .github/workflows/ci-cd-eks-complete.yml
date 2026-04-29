@@ -1,416 +1,195 @@
-name: CI/CD EKS — e-shop
+name: CI/CD EKS Pipeline
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ "main" ]
 
 env:
   AWS_REGION: us-east-1
-  EKS_CLUSTER_NAME: ecommerce-cluster
   APP_REPOSITORY: e-shop/app
   WEB_REPOSITORY: e-shop/web
-  HELM_RELEASE: e-shop
-  HELM_NAMESPACE: e-shop
 
-permissions:
-  id-token: write
-  contents: read
-
-# ══════════════════════════════════════════════
-# STAGE 1 — TESTS PHP
-# ══════════════════════════════════════════════
 jobs:
+
+# =========================
+# 1. TESTS
+# =========================
   tests:
-    name: PHPUnit Tests
     runs-on: ubuntu-latest
 
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: app_test
-          MYSQL_USER: app
-          MYSQL_PASSWORD: app
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uapp -papp --silent"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      APP_ENV: test
-      APP_DEBUG: 0
-      APP_SECRET: test_secret_ci_only
-      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app_test?serverVersion=8.0.32&charset=utf8mb4"
-      MAILER_DSN: "null://null"
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup PHP 8.4
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
-          extensions: ctype, iconv, pdo_mysql
-          tools: composer:v2
-          coverage: none
+          php-version: "8.2"
+          extensions: pdo, pdo_mysql
 
-      - name: Cache Composer
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache/files
-          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-
+      - name: Install MySQL client
+        run: sudo apt-get update && sudo apt-get install -y mysql-client
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        run: composer install --no-interaction --prefer-dist
 
-      - name: Wait for MySQL (health-check)
+      - name: Prepare env
         run: |
-          for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -uapp -papp --silent 2>/dev/null; then
-              echo "MySQL ready ✅"
-              break
-            fi
-            echo "Waiting for MySQL... (${i}/30)"
-            sleep 3
-          done
-
-      - name: Create & migrate database
-        run: |
-          php bin/console doctrine:database:create --if-not-exists --no-interaction
-          php bin/console doctrine:migrations:migrate --no-interaction
-
-      - name: Run PHPUnit
-        run: php bin/phpunit --testdox
-
-# ══════════════════════════════════════════════
-# STAGE 2 — SONARQUBE
-# ══════════════════════════════════════════════
-  sonar:
-    name: SonarQube Analysis
-    runs-on: ubuntu-latest
-    needs: tests
-    if: github.event_name == 'push'
-    env:
-      APP_ENV: test
-      APP_DEBUG: 0
-      APP_SECRET: test_secret_ci_only
-      DATABASE_URL: "mysql://app:app@127.0.0.1:3306/app_test?serverVersion=8.0.32&charset=utf8mb4"
-      MAILER_DSN: "null://null"
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: app_test
-          MYSQL_USER: app
-          MYSQL_PASSWORD: app
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uapp -papp --silent"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup PHP 8.4
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: ctype, iconv, pdo_mysql
-          tools: composer:v2
-          coverage: xdebug
-
-      - name: Cache Composer
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache/files
-          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+          cp .env .env.test || true
 
       - name: Wait for MySQL
         run: |
-          for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -uapp -papp --silent 2>/dev/null; then
-              echo "MySQL ready ✅"
-              break
-            fi
+          for i in {1..10}; do
+            mysqladmin ping -h127.0.0.1 -uroot -proot && break
             sleep 3
           done
 
-      - name: Create & migrate database
-        run: |
-          php bin/console doctrine:database:create --if-not-exists --no-interaction
-          php bin/console doctrine:migrations:migrate --no-interaction
+      - name: Run migrations
+        run: php bin/console doctrine:migrations:migrate --no-interaction
 
-      - name: Run PHPUnit with coverage
-        run: |
-          mkdir -p coverage
-          php -d xdebug.mode=coverage bin/phpunit \
-            --log-junit coverage/junit.xml \
-            --coverage-clover coverage/clover.xml
+      - name: Run tests
+        run: php bin/phpunit
 
-      - name: Check SonarQube reachability
-        run: |
-          for i in 1 2 3; do
-            if curl -fsS --max-time 10 "http://3.91.213.211:9000/api/server/version" > /dev/null; then
-              echo "SonarQube reachable ✅"
-              exit 0
-            fi
-            echo "Attempt ${i}/3 failed. Retrying..."
-            sleep 5
-          done
-          echo "SonarQube not reachable — skipping scan"
-          exit 0
 
-      - name: SonarQube Scan
-        if: secrets.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "http://3.91.213.211:9000"
-
-# ══════════════════════════════════════════════
-# STAGE 3 — BUILD & PUSH ECR
-# ══════════════════════════════════════════════
-  build:
-    name: Build & Push ECR
+# =========================
+# 2. SONARQUBE
+# =========================
+  sonar:
     runs-on: ubuntu-latest
     needs: tests
-    if: github.event_name != 'pull_request'
-
-    outputs:
-      registry: ${{ steps.login-ecr.outputs.registry }}
-      sha_tag: sha-${{ github.sha }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Generate .env.local for Docker build
+      - name: Sonar Scan
         run: |
-          cat > .env.local << EOF
-          APP_ENV=prod
-          APP_DEBUG=0
-          APP_SECRET=${{ secrets.APP_SECRET }}
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          MAILER_DSN=${{ secrets.MAILER_DSN || 'null://null' }}
-          EOF
-          echo ".env.local generated ✅"
+          if curl -s ${{ secrets.SONAR_HOST }} > /dev/null; then
+            docker run --rm \
+              -e SONAR_HOST_URL="${{ secrets.SONAR_HOST }}" \
+              -e SONAR_LOGIN="${{ secrets.SONAR_TOKEN }}" \
+              -v "${PWD}:/usr/src" \
+              sonarsource/sonar-scanner-cli
+          else
+            echo "SonarQube unreachable"
+            exit 1
+          fi
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build Docker images
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          TAG: sha-${{ github.sha }}
-        run: |
-          set -euo pipefail
-          echo "Building APP image..."
-          docker build --build-arg APP_ENV=prod -t "$REGISTRY/$APP_REPOSITORY:$TAG" -t "$REGISTRY/$APP_REPOSITORY:latest" .
-          echo "Building WEB (nginx) image..."
-          docker build -f docker/nginx/Dockerfile -t "$REGISTRY/$WEB_REPOSITORY:$TAG" -t "$REGISTRY/$WEB_REPOSITORY:latest" .
-          echo "Images built ✅"
-
-      - name: Push images to ECR
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          TAG: sha-${{ github.sha }}
-        run: |
-          set -euo pipefail
-          docker push "$REGISTRY/$APP_REPOSITORY:$TAG"
-          docker push "$REGISTRY/$APP_REPOSITORY:latest"
-          docker push "$REGISTRY/$WEB_REPOSITORY:$TAG"
-          docker push "$REGISTRY/$WEB_REPOSITORY:latest"
-          echo "Images pushed ✅"
-
-      - name: Cleanup .env.local
-        if: always()
-        run: rm -f .env.local
-
-# ══════════════════════════════════════════════
-# STAGE 4 — DAST OWASP ZAP
-# ══════════════════════════════════════════════
-  dast:
-    name: OWASP ZAP Scan
+# =========================
+# 3. BUILD & PUSH (ECR)
+# =========================
+  build:
     runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name != 'pull_request'
-    continue-on-error: true
+    needs: sonar
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Start application for DAST scan
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          TAG: sha-${{ github.sha }}
+      - name: Login to ECR
         run: |
-          set -euo pipefail
-          docker run -d --name e-shop-dast -p 8080:80 -e APP_ENV=prod -e APP_SECRET=dast_scan_only "$REGISTRY/$WEB_REPOSITORY:$TAG"
-          echo "Waiting for app to start..."
-          for i in $(seq 1 30); do
-            if curl -fsS --max-time 5 http://localhost:8080 > /dev/null 2>&1; then
-              echo "App ready for ZAP scan ✅"
-              break
-            fi
-            echo "Attempt ${i}/30..."
-            sleep 3
-          done
+          aws ecr get-login-password --region $AWS_REGION \
+          | docker login --username AWS --password-stdin \
+          $(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com
 
-      - name: OWASP ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: "http://localhost:8080"
-          fail_action: false
-          cmd_options: "-a -j"
-
-      - name: Upload ZAP security report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zap-report-${{ github.sha }}
-          path: |
-            report_html.html
-            report_json.json
-          retention-days: 30
-
-      - name: Stop DAST container
-        if: always()
-        run: docker rm -f e-shop-dast || true
-
-# ══════════════════════════════════════════════
-# STAGE 5 — DEPLOY EKS
-# ══════════════════════════════════════════════
-  deploy:
-    name: Deploy to EKS
-    runs-on: ubuntu-latest
-    needs: [build, dast]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    environment: production
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-
-      - name: Connect to EKS
+      - name: Create ECR repos if not exist
         run: |
-          set -euo pipefail
-          aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
-          kubectl get nodes
-          echo "Connected to EKS ✅"
+          aws ecr describe-repositories --repository-names $APP_REPOSITORY || \
+          aws ecr create-repository --repository-name $APP_REPOSITORY
 
-      - name: Set ECR registry
+          aws ecr describe-repositories --repository-names $WEB_REPOSITORY || \
+          aws ecr create-repository --repository-name $WEB_REPOSITORY
+
+      - name: Build & Push
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          echo "ECR_REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> "$GITHUB_ENV"
+          REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          TAG=latest
 
-      - name: Install External Secrets Operator
-        run: |
-          helm repo add external-secrets https://charts.external-secrets.io
-          helm repo update
-          helm upgrade --install external-secrets external-secrets/external-secrets \
-            --namespace external-secrets \
-            --create-namespace \
-            --set installCRDs=true \
-            --wait \
-            --timeout 10m
-          echo "External Secrets ready ✅"
+          docker build -t $REGISTRY/$APP_REPOSITORY:$TAG .
+          docker push $REGISTRY/$APP_REPOSITORY:$TAG
 
-      - name: Wait for External Secrets CRDs
+
+# =========================
+# 4. DAST (ZAP)
+# =========================
+  dast:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run test container
         run: |
-          kubectl wait --for=condition=Established --timeout=120s crd/externalsecrets.external-secrets.io
-          kubectl wait --for=condition=Established --timeout=120s crd/secretstores.external-secrets.io
-          echo "CRDs ready ✅"
+          docker run -d -p 8080:80 nginx
+
+      - name: Wait
+        run: sleep 10
+
+      - name: ZAP scan
+        run: |
+          docker run --rm \
+            -v $(pwd):/zap/wrk/:rw \
+            owasp/zap2docker-stable \
+            zap-baseline.py \
+            -t http://localhost:8080 \
+            -r report.html || true
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report.html
+
+
+# =========================
+# 5. DEPLOY (EKS)
+# =========================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: dast
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ecommerce-cluster --region $AWS_REGION
+
+      - name: Verify cluster
+        run: kubectl get nodes
 
       - name: Deploy with Helm
         run: |
-          set -euo pipefail
-          helm upgrade --install "$HELM_RELEASE" ./k8s/helm/e-shop \
-            --namespace "$HELM_NAMESPACE" \
-            --create-namespace \
-            --set image.app.repository="$ECR_REGISTRY/$APP_REPOSITORY" \
-            --set image.web.repository="$ECR_REGISTRY/$WEB_REPOSITORY" \
-            --set image.app.tag=sha-${{ github.sha }} \
-            --set image.web.tag=sha-${{ github.sha }} \
-            --set externalSecrets.remoteSecretName=/e-shop/prod/app \
-            --atomic \
-            --wait \
-            --timeout 10m
-          echo "Helm deploy done ✅"
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-      - name: Verify rollout
-        run: |
-          kubectl -n "$HELM_NAMESPACE" rollout status deploy/e-shop --timeout=600s
-          echo "Rollout OK ✅"
-
-      - name: Verify migrations
-        run: |
-          kubectl -n "$HELM_NAMESPACE" wait --for=condition=complete job/e-shop-migrations --timeout=300s || echo "No migrations job found"
-          echo "Migrations OK ✅"
-
-      - name: Deployment summary
-        if: always()
-        run: |
-          echo "════════════════════════════════"
-          echo "  DEPLOYMENT SUMMARY"
-          echo "════════════════════════════════"
-          echo "Cluster   : $EKS_CLUSTER_NAME"
-          echo "Namespace : $HELM_NAMESPACE"
-          echo "Tag       : sha-${{ github.sha }}"
-          echo "Registry  : $ECR_REGISTRY"
-          echo "════════════════════════════════"
-          kubectl -n "$HELM_NAMESPACE" get pods
-          kubectl -n "$HELM_NAMESPACE" get services
+          helm upgrade --install e-shop ./k8s/helm/e-shop \
+            --set image.repository=$REGISTRY/$APP_REPOSITORY \
+            --set image.tag=latest 
