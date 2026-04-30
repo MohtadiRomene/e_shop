@@ -3,15 +3,15 @@ namespace: e-shop
 serviceAccount:
   create: true
   name: e-shop-app
-  roleArn: arn:aws:iam::869937525188:role/e-shop-prod-app-irsa
+  roleArn: "arn:aws:iam::869937525188:role/e-shop-prod-app-irsa"
 
 image:
   app:
-  repository: 869937525188.dkr.ecr.us-east-1.amazonaws.com/e-shop/app
+    repository: "869937525188.dkr.ecr.us-east-1.amazonaws.com/e-shop/app"
     tag: "sha-placeholder"
     pullPolicy: IfNotPresent
   web:
-  repository: 869937525188.dkr.ecr.us-east-1.amazonaws.com/e-shop/web
+    repository: "869937525188.dkr.ecr.us-east-1.amazonaws.com/e-shop/web"
     tag: "sha-placeholder"
     pullPolicy: IfNotPresent
 
