@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: e-shop
@@ -22,10 +22,25 @@ spec:
         app.kubernetes.io/name: e-shop
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: app
           image: "{{ .Values.image.app.repository }}:{{ .Values.image.app.tag }}"
           imagePullPolicy: {{ .Values.image.app.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
           env:
             - name: APP_ENV
               value: {{ .Values.env.appEnv | quote }}
@@ -70,6 +85,14 @@ spec:
         - name: web
           image: "{{ .Values.image.web.repository }}:{{ .Values.image.web.tag }}"
           imagePullPolicy: {{ .Values.image.web.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - containerPort: 80
               name: http
