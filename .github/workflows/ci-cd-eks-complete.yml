@@ -187,7 +187,7 @@ jobs:
       - name: Check SonarQube reachability
         run: |
           for i in 1 2 3; do
-            if curl -fsS --max-time 10 "http://35.171.229.243:9000/api/server/version" > /dev/null; then
+            if curl -fsS --max-time 10 "http://3.91.213.211:9000/api/server/version" > /dev/null; then
               echo "SonarQube reachable ✅"
               exit 0
             fi
@@ -202,7 +202,7 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "http://35.171.229.243:9000"
+          SONAR_HOST_URL: "http://3.91.213.211:9000"
 
 # ══════════════════════════════════════════════
 # STAGE 3 — BUILD & PUSH ECR
