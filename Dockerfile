@@ -37,12 +37,24 @@ COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY . /var/www/html
 COPY --from=vendor /app/vendor /var/www/html/vendor
 
-RUN chmod +x /usr/local/bin/entrypoint.sh \
+# ✅ FIX: créer un user non-root uid 1000 (requis par PodSecurity restricted)
+RUN addgroup -g 1000 appuser \
+    && adduser -u 1000 -G appuser -s /bin/sh -D appuser \
+    && chmod +x /usr/local/bin/entrypoint.sh \
     && mkdir -p var/cache var/log \
-    && chown -R www-data:www-data /var/www/html/var
+    && chown -R appuser:appuser /var/www/html
+
+# ✅ FIX: configurer php-fpm pour tourner avec appuser
+RUN sed -i 's/user = www-data/user = appuser/g' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/group = www-data/group = appuser/g' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/;listen.owner = www-data/listen.owner = appuser/g' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/;listen.group = www-data/listen.group = appuser/g' /usr/local/etc/php-fpm.d/www.conf
 
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
+
+# ✅ FIX: switcher sur appuser avant de lancer le process
+USER 1000
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
