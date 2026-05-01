@@ -176,6 +176,8 @@ jobs:
   build:
     name: Build & Push (ECR)
     runs-on: ubuntu-latest
+    env:
+      HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
     needs: php-tests
     if: github.event_name != 'pull_request'
 
@@ -191,7 +193,7 @@ jobs:
 
       # ── Authentification AWS via OIDC (pas de clés stockées) ──
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+        if: env.HAS_ROLE_ARN == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
@@ -199,7 +201,7 @@ jobs:
 
       # ── Fallback : clés AWS classiques ──
       - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
+        if: env.HAS_ROLE_ARN == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
@@ -273,7 +275,7 @@ jobs:
 
       # ── Lancer l'app en local avec Docker pour scanner ──
       - name: Configure AWS credentials
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+        if: env.HAS_ROLE_ARN == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
@@ -372,14 +374,14 @@ jobs:
 
       # ── Authentification AWS ──
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+        if: env.HAS_ROLE_ARN == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
+        if: env.HAS_ROLE_ARN == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
