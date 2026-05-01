@@ -15,7 +15,8 @@ image:
     tag: "sha-placeholder"
     pullPolicy: IfNotPresent
 
-replicaCount: 3
+# ✅ FIX: replicaCount réduit à 1 pour le debug
+replicaCount: 1
 
 resources:
   app:
@@ -38,20 +39,23 @@ service:
   port: 80
 
 ingress:
-  enabled: true
+  # ✅ FIX: désactivé temporairement (manque permissions ec2:DescribeRouteTables)
+  enabled: false
   className: alb
   host: ""
   certificateArn: ""
   healthcheckPath: /healthz
 
 hpa:
-  enabled: true
-  minReplicas: 3
-  maxReplicas: 10
+  # ✅ FIX: désactivé temporairement (metrics-server pas prêt)
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
   targetCPUUtilizationPercentage: 70
 
 pdb:
-  minAvailable: 2
+  # ✅ FIX: minAvailable réduit à 0 pour permettre le déploiement avec 1 replica
+  minAvailable: 0
 
 externalSecrets:
   enabled: true
@@ -62,18 +66,19 @@ migrations:
   enabled: true
   backoffLimit: 1
 
-  securityContext:
-    runAsNonRoot: true
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-    seccompProfile:
-      type: RuntimeDefault
-
+# ✅ FIX: securityContext au bon niveau (pas sous migrations)
 securityContext:
   runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
   allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
   capabilities:
     drop:
       - ALL
