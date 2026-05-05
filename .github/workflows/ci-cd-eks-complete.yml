@@ -522,6 +522,12 @@ jobs:
           fi
 
       # ✅ FIX: déployer sans --rollback-on-failure pour garder les ressources en cas d'échec
+      - name: Cleanup orphan migrations job
+        run: |
+          kubectl -n "$HELM_NAMESPACE" delete job e-shop-migrations \
+            --ignore-not-found=true
+          echo "Orphan job cleaned ?"
+
       - name: Deploy with Helm
         run: |
           set -euo pipefail
