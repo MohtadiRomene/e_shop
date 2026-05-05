@@ -1,6 +1,5 @@
 FROM nginx:1.27-alpine
 
-# Rediriger les temp dirs vers /tmp (accessible sans root)
 RUN sed -i 's|^user .*|# user removed — non-root|' /etc/nginx/nginx.conf \
     && mkdir -p /tmp/nginx/client_temp \
                 /tmp/nginx/proxy_temp \
@@ -10,8 +9,9 @@ RUN sed -i 's|^user .*|# user removed — non-root|' /etc/nginx/nginx.conf \
     && chown -R nginx:nginx /tmp/nginx \
     && chown -R nginx:nginx /var/log/nginx \
     && chown -R nginx:nginx /etc/nginx/conf.d \
-    && touch /var/run/nginx.pid \
-    && chown nginx:nginx /var/run/nginx.pid
+    # Corriger /run/nginx.pid ET /var/run/nginx.pid (symlink sur Alpine)
+    && touch /run/nginx.pid \
+    && chown nginx:nginx /run/nginx.pid
 
 WORKDIR /var/www/html
 COPY public /var/www/html/public
