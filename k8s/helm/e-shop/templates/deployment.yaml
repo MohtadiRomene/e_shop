@@ -1,44 +1,112 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: e-shop-app
+  name: e-shop
   namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: e-shop
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: e-shop-app
+      app.kubernetes.io/name: e-shop
   template:
     metadata:
       labels:
-        app: e-shop-app
+        app.kubernetes.io/name: e-shop
     spec:
-
       serviceAccountName: {{ .Values.serviceAccount.name }}
-
+      # ✅ securityContext POD level (fsGroup ici uniquement)
       securityContext:
-        {{- toYaml .Values.securityContext | nindent 8 }}
-
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: app
           image: "{{ .Values.image.app.repository }}:{{ .Values.image.app.tag }}"
           imagePullPolicy: {{ .Values.image.app.pullPolicy }}
-
-          ports:
-            - containerPort: 80
-
-          resources:
-            {{- toYaml .Values.resources.app | nindent 12 }}
-
+          # ✅ securityContext CONTAINER level (pas de fsGroup ici)
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - containerPort: 9000
+              name: fpm
           env:
             - name: APP_ENV
               value: {{ .Values.env.appEnv | quote }}
             - name: APP_DEBUG
               value: {{ .Values.env.appDebug | quote }}
-
+            - name: TRUSTED_PROXIES
+              value: {{ .Values.env.trustedProxies | quote }}
+            - name: TRUSTED_HOSTS
+              value: {{ .Values.env.trustedHosts | quote }}
+            - name: RUN_MIGRATIONS
+              value: {{ .Values.env.runMigrations | quote }}
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: app_secret
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: database_url
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          startupProbe:
+            tcpSocket:
+              port: 9000
+            failureThreshold: 30
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources.app | nindent 12 }}
+        - name: web
+          image: "{{ .Values.image.web.repository }}:{{ .Values.image.web.tag }}"
+          imagePullPolicy: {{ .Values.image.web.pullPolicy }}
+          # ✅ securityContext CONTAINER level
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.resources.web | nindent 12 }}
 ---
 apiVersion: batch/v1
 kind: Job
@@ -49,23 +117,40 @@ spec:
   backoffLimit: {{ .Values.migrations.backoffLimit }}
   template:
     spec:
-
       restartPolicy: Never
-
       serviceAccountName: {{ .Values.serviceAccount.name }}
-
+      # ✅ securityContext POD level hardcodé (pas de .Values.migrations.securityContext)
       securityContext:
-        {{- toYaml .Values.migrations.securityContext | nindent 8 }}
-
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: migrations
           image: "{{ .Values.image.app.repository }}:{{ .Values.image.app.tag }}"
-
-          command: ["sh", "-c", "php artisan migrate"]
-
+          # ✅ Symfony pas Laravel
+          command: ["php", "bin/console", "doctrine:migrations:migrate", "--no-interaction"]
+          # ✅ securityContext CONTAINER level hardcodé
           securityContext:
-            {{- toYaml .Values.migrations.securityContext | nindent 12 }}
-
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
           env:
             - name: APP_ENV
               value: {{ .Values.env.appEnv | quote }}
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: app_secret
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: e-shop-runtime
+                  key: database_url
