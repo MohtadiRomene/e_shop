@@ -15,7 +15,7 @@ if [ -z "${DATABASE_URL}" ]; then
 fi
 
 mkdir -p var/cache var/log
-chown -R www-data:www-data var
+
 
 if [ "${APP_DEBUG}" = "1" ]; then
   php bin/console cache:clear \
@@ -49,6 +49,5 @@ if [ "${ENSURE_DEFAULT_ADMIN:-0}" = "1" ]; then
 fi
 
 # Ensure runtime cache/log dirs remain writable by php-fpm worker user.
-chown -R www-data:www-data var
 
 exec "$@"
