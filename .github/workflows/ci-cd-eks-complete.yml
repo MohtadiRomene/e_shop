@@ -295,82 +295,82 @@ jobs:
 # ══════════════════════════════════════════════
 # STAGE 4 — DAST OWASP ZAP
 # ══════════════════════════════════════════════
-  dast:
-    name: OWASP ZAP Scan
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name != 'pull_request'
-    continue-on-error: true
-    env:
-      HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+dast:
+  name: OWASP ZAP Scan
+  runs-on: ubuntu-latest
+  needs: build
+  if: github.event_name != 'pull_request'
+  continue-on-error: true
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
-        if: env.HAS_ROLE_ARN == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v4
+      if: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
+      with:
+        role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Configure AWS credentials (Access Keys fallback)
-        if: env.HAS_ROLE_ARN == 'false'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Configure AWS credentials (fallback)
+      if: ${{ secrets.AWS_GITHUB_ROLE_ARN == '' }}
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Start application for DAST scan
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          TAG: sha-${{ github.sha }}
-        run: |
-          set -euo pipefail
+    # ✅ FIX IMPORTANT: permissions ZAP workspace
+    - name: Fix ZAP workspace permissions
+      run: |
+        chmod -R 777 $GITHUB_WORKSPACE
 
-          docker run -d \
-            --name e-shop-dast \
-            -p 8080:80 \
-            -e APP_ENV=prod \
-            -e APP_SECRET=dast_scan_only \
-            "$REGISTRY/$WEB_REPOSITORY:$TAG"
+    - name: Start application for DAST scan
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        TAG: sha-${{ github.sha }}
+      run: |
+        docker run -d \
+          --name e-shop-dast \
+          -p 8080:80 \
+          -e APP_ENV=prod \
+          -e APP_SECRET=dast_scan_only \
+          "$REGISTRY/$WEB_REPOSITORY:$TAG"
 
-          echo "Waiting for app to start..."
-          for i in $(seq 1 30); do
-            if curl -fsS --max-time 5 http://localhost:8080 > /dev/null 2>&1; then
-              echo "App ready for ZAP scan ✅"
-              break
-            fi
-            echo "Attempt ${i}/30..."
-            sleep 3
-          done
+        echo "Waiting for app..."
+        for i in $(seq 1 30); do
+          curl -fsS http://localhost:8080 && break || true
+          echo "Attempt $i/30"
+          sleep 3
+        done
 
-      - name: OWASP ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: "http://localhost:8080"
-          fail_action: false
-          cmd_options: "-a -j"
+    # ✅ FIX ZAP (ROOT + workspace writable)
+    - name: OWASP ZAP Baseline Scan
+      uses: zaproxy/action-baseline@v0.12.0
+      with:
+        target: "http://localhost:8080"
+        fail_action: false
+        cmd_options: "-a -j"
+        docker_options: "--user root -v ${{ github.workspace }}:/zap/wrk:rw"
 
-      - name: Upload ZAP security report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zap-report-${{ github.sha }}
-          path: |
-            report_html.html
-            report_json.json
-          retention-days: 30
+    - name: Upload ZAP report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: zap-report-${{ github.sha }}
+        path: |
+          report_html.html
+          report_json.json
+        retention-days: 30
 
-      - name: Stop DAST container
-        if: always()
-        run: docker rm -f e-shop-dast || true
+    - name: Stop container
+      if: always()
+      run: docker rm -f e-shop-dast || true
 
 # ══════════════════════════════════════════════
 # STAGE 5 — DEPLOY EKS
