@@ -301,6 +301,9 @@ jobs:
     needs: build
     if: github.event_name != 'pull_request'
     continue-on-error: true
+    permissions:
+      contents: read
+      issues: write        # ← ajouter ceci
     env:
       HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
 
@@ -334,20 +337,57 @@ jobs:
         run: |
           set -euo pipefail
 
-          docker run -d \
-            --name e-shop-dast \
-            -p 8080:80 \
-            -e APP_ENV=prod \
-            -e APP_SECRET=dast_scan_only \
-            "$REGISTRY/$WEB_REPOSITORY:$TAG"
+          # Créer un réseau Docker
+          docker network create e-shop-dast-net
 
-          echo "Waiting for app to start..."
+          # Démarrer MySQL
+          docker run -d \
+            --name e-shop-db \
+            --network e-shop-dast-net \
+            -e MYSQL_ROOT_PASSWORD=root \
+            -e MYSQL_DATABASE=app \
+            -e MYSQL_USER=app \
+            -e MYSQL_PASSWORD=app \
+            mysql:8.0
+
+          # Attendre MySQL
+          echo "Waiting for MySQL..."
           for i in $(seq 1 30); do
-            if curl -fsS --max-time 5 http://localhost:8080 > /dev/null 2>&1; then
-              echo "App ready for ZAP scan ✅"
+            if docker exec e-shop-db mysqladmin ping -h 127.0.0.1 -uroot -proot --silent 2>/dev/null; then
+              echo "MySQL ready ✅"
               break
             fi
-            echo "Attempt ${i}/30..."
+            sleep 3
+          done
+
+          # Démarrer le container APP (PHP-FPM)
+          docker run -d \
+            --name e-shop-app \
+            --network e-shop-dast-net \
+            -e APP_ENV=prod \
+            -e APP_DEBUG=0 \
+            -e APP_SECRET=dast_scan_only_secret_32chars__ \
+            -e DATABASE_URL="mysql://app:app@e-shop-db:3306/app?serverVersion=8.0.32&charset=utf8mb4" \
+            -e TRUSTED_PROXIES=REMOTE_ADDR \
+            "$REGISTRY/$APP_REPOSITORY:$TAG"
+
+          # Démarrer le container WEB (nginx) qui proxie vers APP
+          docker run -d \
+            --name e-shop-web \
+            --network e-shop-dast-net \
+            -p 8080:80 \
+            -e APP_ENV=prod \
+            "$REGISTRY/$WEB_REPOSITORY:$TAG"
+
+          # Attendre que l'app réponde
+          echo "Waiting for app to be ready..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080 || echo "000")
+            if [[ "$STATUS" == "200" || "$STATUS" == "302" || "$STATUS" == "301" ]]; then
+              echo "App ready (HTTP $STATUS) ✅"
+              break
+            fi
+            echo "Attempt ${i}/30 — HTTP $STATUS..."
             sleep 3
           done
 
@@ -368,9 +408,11 @@ jobs:
             report_json.json
           retention-days: 30
 
-      - name: Stop DAST container
+      - name: Stop DAST containers
         if: always()
-        run: docker rm -f e-shop-dast || true
+        run: |
+          docker rm -f e-shop-web e-shop-app e-shop-db || true
+          docker network rm e-shop-dast-net || true
 
 # ══════════════════════════════════════════════
 # STAGE 5 — DEPLOY EKS
