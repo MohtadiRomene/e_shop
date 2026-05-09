@@ -301,8 +301,9 @@ jobs:
     if: github.event_name != 'pull_request'
     continue-on-error: true
     permissions:
+      id-token: write      # ← ajouter ceci
       contents: read
-      issues: write        # ← ajouter ceci
+      issues: write
     env:
       HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
 
