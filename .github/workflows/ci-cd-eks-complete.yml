@@ -301,7 +301,6 @@ jobs:
     needs: build
     if: github.event_name != 'pull_request'
     continue-on-error: true
-
     env:
       HAS_ROLE_ARN: ${{ secrets.AWS_GITHUB_ROLE_ARN != '' }}
 
@@ -316,7 +315,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Configure AWS credentials (fallback)
+      - name: Configure AWS credentials (Access Keys fallback)
         if: env.HAS_ROLE_ARN == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -328,15 +327,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Fix ZAP workspace permissions
-        run: |
-          chmod -R 777 $GITHUB_WORKSPACE
-
       - name: Start application for DAST scan
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           TAG: sha-${{ github.sha }}
         run: |
+          set -euo pipefail
+
           docker run -d \
             --name e-shop-dast \
             -p 8080:80 \
@@ -344,10 +341,13 @@ jobs:
             -e APP_SECRET=dast_scan_only \
             "$REGISTRY/$WEB_REPOSITORY:$TAG"
 
-          echo "Waiting for app..."
+          echo "Waiting for app to start..."
           for i in $(seq 1 30); do
-            curl -fsS http://localhost:8080 && break || true
-            echo "Attempt $i/30"
+            if curl -fsS --max-time 5 http://localhost:8080 > /dev/null 2>&1; then
+              echo "App ready for ZAP scan ✅"
+              break
+            fi
+            echo "Attempt ${i}/30..."
             sleep 3
           done
 
@@ -357,9 +357,8 @@ jobs:
           target: "http://localhost:8080"
           fail_action: false
           cmd_options: "-a -j"
-          docker_options: "--user root -v ${{ github.workspace }}:/zap/wrk:rw"
 
-      - name: Upload ZAP report
+      - name: Upload ZAP security report
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -369,7 +368,7 @@ jobs:
             report_json.json
           retention-days: 30
 
-      - name: Stop container
+      - name: Stop DAST container
         if: always()
         run: docker rm -f e-shop-dast || true
 
@@ -424,6 +423,7 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "ECR_REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> "$GITHUB_ENV"
 
+      # ✅ FIX: préparer le namespace avec tous les labels
       - name: Prepare e-shop namespace
         run: |
           kubectl create namespace "$HELM_NAMESPACE" --dry-run=client -o yaml | \
@@ -446,6 +446,7 @@ jobs:
 
           echo "Namespace ready ✅"
 
+      # ✅ FIX: installer ESO sans --wait
       - name: Install External Secrets Operator
         run: |
           helm repo add external-secrets https://charts.external-secrets.io
@@ -457,6 +458,7 @@ jobs:
             --timeout 10m
           echo "Helm ESO install done ✅"
 
+      # ✅ FIX: attendre CRDs + pods + webhook
       - name: Wait for External Secrets CRDs and webhook
         run: |
           echo "Waiting for CRDs..."
@@ -481,6 +483,7 @@ jobs:
           sleep 15
           echo "All CRDs and pods ready ✅"
 
+      # ✅ FIX: recréer le ClusterSecretStore s'il n'existe pas
       - name: Ensure ClusterSecretStore exists
         run: |
           if ! kubectl get clustersecretstore aws-secretsmanager &>/dev/null; then
@@ -518,11 +521,12 @@ jobs:
             echo "ClusterSecretStore already exists ✅"
           fi
 
+      # ✅ FIX: déployer sans --rollback-on-failure pour garder les ressources en cas d'échec
       - name: Cleanup orphan migrations job
         run: |
           kubectl -n "$HELM_NAMESPACE" delete job e-shop-migrations \
             --ignore-not-found=true
-          echo "Orphan job cleaned ✅"
+          echo "Orphan job cleaned ?"
 
       - name: Deploy with Helm
         run: |
@@ -539,6 +543,7 @@ jobs:
             --timeout 15m
           echo "Helm deploy done ✅"
 
+      # ✅ FIX: debug complet si le deploy échoue
       - name: Debug on failure
         if: failure()
         run: |
@@ -562,6 +567,8 @@ jobs:
 
       - name: Verify migrations
         run: |
+          # Le job migrations peut déjà être supprimé (hook-delete-policy: hook-succeeded)
+          # On vérifie s'il existe, sinon on considère qu'il a réussi
           if kubectl -n "$HELM_NAMESPACE" get job/e-shop-migrations &>/dev/null; then
             kubectl -n "$HELM_NAMESPACE" wait \
               --for=condition=complete \
