@@ -567,11 +567,17 @@ jobs:
 
       - name: Verify migrations
         run: |
-          kubectl -n "$HELM_NAMESPACE" wait \
-            --for=condition=complete \
-            job/e-shop-migrations \
-            --timeout=300s
-          echo "Migrations OK ✅"
+          # Le job migrations peut déjà être supprimé (hook-delete-policy: hook-succeeded)
+          # On vérifie s'il existe, sinon on considère qu'il a réussi
+          if kubectl -n "$HELM_NAMESPACE" get job/e-shop-migrations &>/dev/null; then
+            kubectl -n "$HELM_NAMESPACE" wait \
+              --for=condition=complete \
+              job/e-shop-migrations \
+              --timeout=300s
+            echo "Migrations OK ✅"
+          else
+            echo "Migrations job already cleaned up (succeeded) ✅"
+          fi
 
       - name: Deployment summary
         if: always()
